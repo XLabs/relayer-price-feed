@@ -1,5 +1,7 @@
 **/lib
 
+ethereum/build
+
 # Logs
 logs
 *.log
