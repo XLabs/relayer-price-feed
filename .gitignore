@@ -69,6 +69,8 @@ jspm_packages/
 .env.production.local
 .env.local
 
+deploy/envs/**/env.sh
+
 # DynamoDB Local files
 .dynamodb/
 
