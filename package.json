@@ -4,10 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx src/app.ts --flag=testnet",
-    "testnet": "tsx src/app.ts --flag=testnet",
-    "tilt": "tsx src/app.ts --flag=tilt",
-    "tiltkub": "tsx src/app.ts --flag=tiltkub",
+    "relayer": "CONTRACTS_JSON_PATH=ethereum/ts-scripts/relayer/config/testnet/contracts.json ts-node src/relayer/app.ts --flag=testnet",
     "prettier": "prettier --write .",
     "build": "tsc",
     "typecheck": "tsc --noEmit --skipLibCheck",
