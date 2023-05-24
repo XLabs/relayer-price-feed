@@ -1,6 +1,8 @@
 **/lib
 
 ethereum/build
+ethereum/lib/*
+ethereum/lib/forge-std
 
 # Logs
 logs
