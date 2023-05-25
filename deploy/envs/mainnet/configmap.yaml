@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: generic-relayer-env
+  namespace: xlabs-generic-relayer
+data:
+  NODE_ENV: staging
+  GENERIC_RELAYER_NAME: xlabs-generic-relayer
+  LOG_FORMAT: json
+  LOG_LEVEL: info
+  SPY_URL: spy:7073
+  REDIS_TLS: "true"
+  GR_RE_FLAG: mainnet
+  CONTRACTS_JSON_PATH: /usr/src/ethereum/ts-scripts/config/k8s-testnet/contracts-new.json
+  # WORMHOLE_RPCS: 
+  # BLOCKCHAIN_PROVIDERS: 
+  # FETCH_SOURCE_TX_HASH: 
