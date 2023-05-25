@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: generic-relayer
+  namespace: xlabs-generic-relayer
+  annotations:
+    prometheus.io/scrape: "true"
+spec:
+  selector:
+    app: generic-relayer
+  ports:
+    - name: api
+      protocol: TCP
+      port: 3000
