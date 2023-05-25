@@ -1,0 +1,1 @@
+tsx ./ts-scripts/relayer/relayProvider/readRelayProviderContractState.ts
