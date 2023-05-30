@@ -2,7 +2,7 @@
 
 ethereum/build
 ethereum/lib/*
-ethereum/lib/forge-std
+ethereum/cache
 
 # Logs
 logs

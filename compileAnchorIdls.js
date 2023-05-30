@@ -1,3 +1,12 @@
+/**
+ * This complete file is almost an identical copy of the one in the wormhole monorepo.
+ * 
+ * The only differences should be the path variables below, which are acomodated to fit xlabs project
+ * architecture.
+ * 
+ * Building solana types and idls should be removed from this project when the wormhole-sdk is finally
+ * published and we get to import it from npm instead of having to build it ourselves.
+ */
 const fs = require("fs");
 
 const SRC_IDL = "./solana/idl";

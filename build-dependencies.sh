@@ -2,26 +2,30 @@
 
 set -e
 # build ethereum contracts
-cd ethereum
-npm ci
+cd ethereum;
 
-make .
+npm ci;
 
-cd ../
+make;
+
+
+cd ../;
 
 
 # build wormhole-sdk
-node ./compileAnchorIdls.js
-cp -r ethereum/ethers-contracts/* sdk/src/ethers-contracts/
+node ./compileAnchorIdls.js;
+cp -r ethereum/ethers-contracts/* sdk/src/ethers-contracts/;
 
-cd sdk
+cd sdk;
 
-npm run build-abis
+npm ci;
 
-npm run build-lib
+npm run build-abis;
 
-cd ../
+npm run build-lib;
 
-set +e
+cd ../;
+
+set +e;
 
 
