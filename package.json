@@ -1,6 +1,6 @@
 {
-  "name": "@wormhole-foundation/offchain-generic-relayer",
-  "version": "0.1.0",
+  "name": "@xlabs-xyz/generic-relayer",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "watch": "tsc --watch",
+    "version": "npm pkg get version --workspaces=false | tr -d \\\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Joe Howarth",

@@ -2,8 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: xlabs-generic-relayer
 resources:
-  - rendered-generic-relayer.deployment.yaml
+  - rendered-relayer.deployment.yaml
 configMapGenerator:
 - name: relayer-contracts
   files:
-    - ./contracts-new.json
+    - ./deployed-contracts/contracts.0.0.1.json

@@ -4,6 +4,8 @@ ethereum/build
 ethereum/lib/*
 ethereum/cache
 
+deploy/deployed_contracts/
+
 # Logs
 logs
 *.log
