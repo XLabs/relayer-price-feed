@@ -20,6 +20,20 @@ struct DeliveryInstruction {
     VaaKey[] vaaKeys;
 }
 
+// Meant to hold all necessary values for `CoreRelayerDelivery::executeInstruction`
+// Nothing more and nothing less.
+struct EvmDeliveryInstruction {
+  uint16 sourceChain;
+  bytes32 targetAddress;
+  bytes payload;
+  Gas gasLimit;
+  TargetNative totalReceiverValue;
+  GasPrice targetChainRefundPerGasUnused;
+  bytes32 senderAddress;
+  bytes32 deliveryHash;
+  bytes[] signedVaas;
+}
+
 struct RedeliveryInstruction {
     VaaKey deliveryVaaKey;
     uint16 targetChain;
@@ -35,11 +49,13 @@ struct RedeliveryInstruction {
  *     `DeliveryOverride` struct which is then passed to `delivery()` to override the parameters of
  *     a previously failed delivery attempt.
  *
- * @custom:member gasLimit - must be >= than the `gasLimit` specified in the `executionParameters`
- *     of the original `DeliveryInstruction`
- * @custom:member maximumRefund - must >= than the `maximumRefund` specified in the original
+ * @custom:member newReceiverValue - must >= than the `receiverValue` specified in the original
  *     `DeliveryInstruction`
- * @custom:member receiverValue - must >= than the `receiverValue` specified in the original
+ * @custom:member newExecutionInfo - for EVM_V1, must contain a gasLimit and targetChainRefundPerGasUnused
+ * such that 
+ * - gasLimit is >= the `gasLimit` specified in the `executionParameters`
+ *     of the original `DeliveryInstruction`
+ * - targetChainRefundPerGasUnused is >=  the `targetChainRefundPerGasUnused` specified in the original
  *     `DeliveryInstruction`
  * @custom:member redeliveryHash - the hash of the redelivery which is being performed
  */
