@@ -19,41 +19,51 @@ function relayerContract(
 }
 
 export class EvmContract implements Contract {
-    private evmContract: ethers.Contract;
+  private evmContract: ethers.Contract;
 
-    constructor(address: string, signer: ethers.Signer) {
-        this.evmContract = relayerContract(address, signer);
-    }
+  constructor(address: string, signer: ethers.Signer) {
+    this.evmContract = relayerContract(address, signer);
+  }
 
-    public async swapRatePrecision(): Promise<BigInt> {
-        return this.evmContract.swapRatePrecision(); 
-    }
+  public async swapRatePrecision(): Promise<BigInt> {
+    return this.evmContract.swapRatePrecision();
+  }
 
-    public async swapRate(tokenAddress: string): Promise<BigInt> {
-        return this.evmContract.swapRate(tokenAddress);
-    }
+  public async swapRate(tokenAddress: string): Promise<BigInt> {
+    return this.evmContract.swapRate(tokenAddress);
+  }
 
-    public async updateSwapRate(chainId: SupportedChainId, tokenAddress: string, newPrice: BigInt, overrides: any): Promise<TxReceipt> {
-        const tx = await this.evmContract.updateSwapRate(chainId, tokenAddress, newPrice, overrides)
-        return tx.wait();
-    }
+  public async updateSwapRate(
+    chainId: SupportedChainId,
+    tokenAddress: string,
+    newPrice: BigInt,
+    overrides: any
+  ): Promise<TxReceipt> {
+    const tx = await this.evmContract.updateSwapRate(
+      chainId,
+      tokenAddress,
+      newPrice,
+      overrides
+    );
+    return tx.wait();
+  }
 }
 
 export class EvmWallet implements Wallet {
-    wallet: ethers.Wallet;
+  wallet: ethers.Wallet;
 
-    constructor(privateKey: string, rpcProviderUrl: string) {
-        this.wallet = new ethers.Wallet(
-            privateKey, 
-            new ethers.providers.JsonRpcProvider(rpcProviderUrl)
-        );
-    }
+  constructor(privateKey: string, rpcProviderUrl: string) {
+    this.wallet = new ethers.Wallet(
+      privateKey,
+      new ethers.providers.JsonRpcProvider(rpcProviderUrl)
+    );
+  }
 
-    public async getFeeData(): Promise<any> {
-        return this.wallet.getFeeData();
-    }
+  public async getFeeData(): Promise<any> {
+    return this.wallet.getFeeData();
+  }
 
-    public async getGasPrice(): Promise<BigInt> {
-        return (await this.wallet.getGasPrice()).toBigInt();
-    }
+  public async getGasPrice(): Promise<BigInt> {
+    return (await this.wallet.getGasPrice()).toBigInt();
+  }
 }
