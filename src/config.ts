@@ -41,6 +41,7 @@ export type OracleConfig = {
   pricePrecision?: number;
   supportedChains?: SupportedChainId[];
   supportedTokens?: TokenInfo[];
+  tokenNativeToLocalAddress?: Record<SupportedChainId, Record<string, string>>;
   signers?: Record<SupportedChainId, Wallet>;
   relayerContracts?: Record<SupportedChainId, Contract>;
   priceFetcher?: PriceFetcher;
