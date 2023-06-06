@@ -14,7 +14,7 @@ const defaultConfig: OracleConfig = {
 };
 
 // @TODO: Add tests
-export class GenericOracle {
+export class PriceOracle {
   private config: OracleConfig;
   private logger: Logger;
 
@@ -88,15 +88,7 @@ export class GenericOracle {
     }
 
     if (!mergedConfig.priceFetcher) {
-      // This depends on coingeckoId property from the TokenInfo type, maybe is too explicit
-      const supportedTokenIds: string[] = Array.from(
-        new Set(mergedConfig.supportedTokens?.map((token) => token.coingeckoId))
-      );
-
-      mergedConfig.priceFetcher = new CoingeckoPriceFetcher(
-        supportedTokenIds,
-        logger
-      );
+      throw new Error(`Missing parameter: priceFetcher.`);
     }
 
     if (!mergedConfig.strategy) {

@@ -4,23 +4,27 @@ import { Logger } from "winston";
 export interface PriceFetcher {
   fetchPrices(): Promise<Map<string, BigInt>>;
   tokenList(): string[];
+  setLogger(logger: Logger): void;
 }
 
 export class FetcherError extends Error {}
 
 export class CoingeckoPriceFetcher implements PriceFetcher {
   tokens: string[];
-  logger: Logger;
+  logger: Logger | undefined;
   priceCache: any; // @TODO: Add price cache
 
-  constructor(tokenList: string[], logger: Logger) {
+  constructor(tokenList: string[]) {
     this.tokens = tokenList;
+  }
+
+  public setLogger(logger: Logger): void {
     this.logger = logger;
   }
 
   public async fetchPrices(): Promise<Map<string, BigInt>> {
     const tokens = this.tokens.join(",");
-    console.log("Fetching prices for: ", tokens);
+    this.log(`Fetching prices for: ${tokens}`, "info");
     const { data, status } = await axios.get(
       `https://api.coingecko.com/api/v3/simple/price?ids=${tokens}&vs_currencies=usd`,
       {
@@ -44,8 +48,14 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
   private formatPriceUpdates(prices: any): Map<string, BigInt> {
     const formattedPrices = new Map<string, BigInt>();
 
-    console.log("Formatting prices:", prices);
+    this.log(`Formatting prices: ${prices}`, "info");
 
     return formattedPrices;
+  }
+
+  private log(message: string, level: string = "info"): void {
+    if (this.logger) {
+      this.logger.log(level, message);
+    }
   }
 }
