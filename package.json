@@ -6,6 +6,7 @@
   "scripts": {
     "api": "npx ts-node ./src/api/api.ts",
     "relayer": "CONTRACTS_JSON_PATH=ethereum/ts-scripts/relayer/config/testnet/contracts.json ts-node src/relayer/app.ts --flag=testnet",
+    "test-message": "ts-node ./ethereum/ts-scripts/relayer/mockIntegration/messageTest.ts --from 6 --to 14",
     "build": "./build-contracts.sh && build-sdk.sh && tsc",
     "prettier": "prettier --write .",
     "typecheck": "tsc --noEmit --skipLibCheck",
