@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { Contract, ContractUpdater, Wallet } from "../contract";
+import { Contract, Wallet } from "../contract";
 import { SupportedChainId, TokenInfo } from "../config";
 import { Logger } from "winston";
 import {
