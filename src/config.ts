@@ -9,7 +9,6 @@ import {
 } from "@certusone/wormhole-sdk";
 import { ethers } from "ethers";
 import { PriceFetcher } from "./prices/fetcher";
-import { Contract, ContractUpdater, Wallet } from "./contract";
 import { UpdateStrategy } from "./strategy";
 
 export const SUPPORTED_CHAIN_IDS = [
@@ -37,14 +36,6 @@ export type OracleConfig = {
   env?: string;
   blockchainEnv?: string;
   logLevel?: string;
-  pricePollingIntervalMs?: number;
-  pricePrecision?: number;
-  supportedChains?: SupportedChainId[];
-  supportedTokens?: TokenInfo[];
-  tokenNativeToLocalAddress?: Record<SupportedChainId, Record<string, string>>;
-  signers?: Record<SupportedChainId, Wallet>;
-  relayerContracts?: Record<SupportedChainId, Contract>;
   priceFetcher?: PriceFetcher;
   strategy?: UpdateStrategy;
-  contractUpdater?: ContractUpdater;
 };

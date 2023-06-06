@@ -6,6 +6,7 @@ import {
   EvmWallet,
   EvmContract,
   CoingeckoPriceFetcher,
+  SimpleUpdateStrategy,
   PriceOracle,
 } from "relayer-price-oracle";
 
@@ -40,13 +41,6 @@ const supportedTokens = [
   },
 ];
 
-// This depends on coingeckoId property from the TokenInfo type, maybe is too explicit
-const supportedTokenIds: string[] = Array.from(
-  new Set(supportedTokens?.map((token) => token.coingeckoId))
-);
-
-const fetcher = new CoingeckoPriceFetcher(supportedTokenIds);
-
 const signers: Record<SupportedChainId, Wallet> = {
   [CHAIN_ID_ETH]: new EvmWallet("pk", "rcpProviderUrl"),
   [CHAIN_ID_AVAX]: new EvmWallet("pk", "rcpProvider"),
@@ -57,12 +51,25 @@ const relayerContracts: Record<SupportedChainId, Contract> = {
   [CHAIN_ID_AVAX]: new EvmContract("avax_address", signers[CHAIN_ID_AVAX]),
 };
 
-const oracle = new PriceOracle({
+// This depends on coingeckoId property from the TokenInfo type, maybe is too explicit
+const supportedTokenIds: string[] = Array.from(
+  new Set(supportedTokens?.map((token) => token.coingeckoId))
+);
+
+const priceFetcher = new CoingeckoPriceFetcher(supportedTokenIds);
+const strategy = new SimpleUpdateStrategy({
   supportedChains: [CHAIN_ID_ETH, CHAIN_ID_AVAX],
   supportedTokens,
   signers,
   relayerContracts,
-  priceFetcher: fetcher,
+  tokenNativeToLocalAddress: map, // @TODO: deal with token map later
+  pollingIntervalMs: 60 * 1000,
+  pricePrecision: 8,
+});
+
+const oracle = new PriceOracle({
+  priceFetcher,
+  strategy,
 });
 
 oracle.start();

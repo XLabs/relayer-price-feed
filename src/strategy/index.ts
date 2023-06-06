@@ -1,37 +1,50 @@
 import { ethers } from "ethers";
-import { Contract, ContractUpdater } from "../contract";
+import { Contract, ContractUpdater, Wallet } from "../contract";
 import { SupportedChainId, TokenInfo } from "../config";
 import { Logger } from "winston";
-import { coalesceChainName } from "@certusone/wormhole-sdk";
+import {
+  CHAIN_ID_FANTOM,
+  CHAIN_ID_POLYGON,
+  coalesceChainName,
+  isEVMChain,
+} from "@certusone/wormhole-sdk";
 
 export interface UpdateStrategy {
   pushNewPrices(prices: Map<string, BigInt>): Promise<void>;
+  setLogger(logger: Logger): void;
+  pollingIntervalMs(): number;
+  tokenList(): TokenInfo[];
 }
 
 export type SimpleStrategyConfig = {
   supportedChainIds: SupportedChainId[];
   supportedTokens: TokenInfo[];
-  tokenNativeToLocalAddress: Record<SupportedChainId, Record<string, string>>;
+  signers: Record<SupportedChainId, Wallet>;
   relayerContracts: Record<SupportedChainId, Contract>;
+  tokenNativeToLocalAddress: Record<SupportedChainId, Record<string, string>>;
+  pollingIntervalMs: number;
   pricePrecision: number;
   maxPriceChangePercentage: number; // upper band
   minPriceChangePercentage: number; // lower band
 };
 
 export class SimpleUpdateStrategy implements UpdateStrategy {
-  constructor(
-    private readonly logger: Logger,
-    private readonly updater: ContractUpdater,
-    private readonly config: SimpleStrategyConfig
-  ) {}
+  private logger: Logger | undefined;
+  constructor(private readonly config: SimpleStrategyConfig) {}
+
+  public setLogger(logger: Logger): void {
+    this.logger = logger;
+  }
+
+  public pollingIntervalMs(): number {
+    return this.config.pollingIntervalMs;
+  }
+
+  public tokenList(): TokenInfo[] {
+    return this.config.supportedTokens;
+  }
 
   public async pushNewPrices(prices: Map<string, BigInt>): Promise<void> {
-    if (!this.updater) {
-      throw new Error(
-        "A contract updater should be provided before pushing price updates."
-      );
-    }
-
     for (const chainId of this.config.supportedChainIds) {
       const contract = this.config.relayerContracts[chainId];
 
@@ -57,20 +70,22 @@ export class SimpleUpdateStrategy implements UpdateStrategy {
         );
 
         if (pricePercentageChange >= this.config.maxPriceChangePercentage) {
-          this.logger.warn(
+          this.log(
+            "warn",
             `Price change larger than max (current: ${currentPriceFormatted}, new: ${newPriceFormatted}), chainId: ${chainId}, token: ${tokenAddress} (${token.symbol}). Skipping update.`
           );
           continue;
         } else if (
           pricePercentageChange < this.config.minPriceChangePercentage
         ) {
-          this.logger.debug(
+          this.log(
+            "debug",
             `Price change too small (current: ${currentPriceFormatted}, new: ${newPriceFormatted}), chainId: ${chainId}, token: ${tokenAddress} (${token.symbol}). Skipping update.`
           );
-          continue;
         }
 
-        this.logger.info(
+        this.log(
+          "info",
           `Executing price update in ${coalesceChainName(chainId)}: ${
             token.symbol
           } going from ${currentPriceFormatted} to ${newPriceFormatted} (${pricePercentageChange.toFixed(
@@ -85,13 +100,81 @@ export class SimpleUpdateStrategy implements UpdateStrategy {
             symbol: token.symbol,
           }
         );
-        this.updater.executePriceUpdate(
+        await this.executePriceUpdate(
           contract,
           chainId,
           tokenAddress,
           newPrice
         );
       }
+    }
+  }
+
+  private async executePriceUpdate(
+    contract: Contract,
+    chainId: SupportedChainId,
+    tokenAddress: string,
+    newPrice: BigInt
+  ): Promise<void> {
+    try {
+      let overrides = {};
+      if (isEVMChain(chainId)) {
+        overrides = await this.calculateGasOverrideForChain(
+          chainId,
+          this.config.signers[chainId]
+        );
+      }
+      const txReceipt = await contract.updateSwapRate(
+        chainId,
+        tokenAddress,
+        newPrice,
+        overrides
+      );
+
+      this.log(
+        "info",
+        `Updated native price on chainId: ${chainId}, token: ${tokenAddress}, txhash: ${txReceipt.transactionHash}`
+      );
+    } catch (e: any) {
+      this.log(
+        "error",
+        `Error updating price in ${coalesceChainName(chainId)}: ${e.message}`,
+        {
+          chainId,
+          tokenAddress,
+          newPrice,
+        }
+      );
+    }
+  }
+
+  // This is Gabriel's code from TBR
+  // ethers.js does not properly calculate priority fees or gas price for some chains (I'm specially looking at you polygon).
+  private async calculateGasOverrideForChain(
+    chainId: SupportedChainId,
+    signer: Wallet
+  ) {
+    let overrides: any = {}; // TODO: Find out type
+    if (chainId === CHAIN_ID_POLYGON) {
+      // look, there's something janky with Polygon + ethers + EIP-1559
+      let feeData = await signer.getFeeData();
+      overrides = {
+        maxFeePerGas: feeData.maxFeePerGas?.mul(70) || undefined,
+        maxPriorityFeePerGas:
+          feeData.maxPriorityFeePerGas?.mul(70) || undefined,
+      };
+    } else if (chainId == CHAIN_ID_FANTOM) {
+      // || toChain === CHAIN_ID_KLAYTN <-- Add this when we support klaytn
+      overrides = {
+        gasPrice: (await signer.getGasPrice()).toString(),
+      };
+    }
+    return overrides;
+  }
+
+  private log(level: string, message: string, ...meta: any[]): void {
+    if (this.logger) {
+      this.logger.log(level, message, meta);
     }
   }
 }
