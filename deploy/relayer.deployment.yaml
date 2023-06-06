@@ -1,0 +1,49 @@
+# kubetpl:syntax:$
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generic-relayer
+  namespace: xlabs-generic-relayer
+  labels:
+    app: generic-relayer
+spec:
+  selector:
+    matchLabels:
+      app: generic-relayer
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: generic-relayer
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: relayer
+          image: $AWS_ACCOUNT.dkr.ecr.us-east-2.amazonaws.com/generic-relayer:$TAG
+          imagePullPolicy: Always
+          command: ["npx", "ts-node","/home/node/app/src/relayer/app.ts", "--flag=$ENV_FLAG"]
+          resources:
+            requests:
+              cpu: 512m
+              memory: 512Mi
+            limits:
+              cpu: 1024m
+              memory: 2048Mi
+          volumeMounts:
+            - name: relayer-contracts
+              mountPath: /usr/src/ethereum/ts-scripts/config/k8s-testnet
+          envFrom:
+            - secretRef:
+                name: generic-relayer-key
+                optional: false
+            - secretRef:
+                name: generic-relayer-redis
+                optional: false
+            - configMapRef:
+                name: generic-relayer-env
+                optional: false
+      volumes:
+        - name: relayer-contracts
+          configMap:
+            name: relayer-contracts

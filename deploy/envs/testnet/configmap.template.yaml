@@ -11,7 +11,7 @@ data:
   SPY_URL: spy:7073
   REDIS_TLS: "true"
   GR_RE_FLAG: testnet
-  CONTRACTS_JSON_PATH: /usr/src/ethereum/ts-scripts/config/k8s-testnet/contracts.0.0.1.json
+  CONTRACTS_JSON_PATH: /usr/src/ethereum/ts-scripts/config/k8s-testnet/<CONTRACTS_FILE_NAME>
   # WORMHOLE_RPCS: 
   # BLOCKCHAIN_PROVIDERS: 
   # FETCH_SOURCE_TX_HASH: 

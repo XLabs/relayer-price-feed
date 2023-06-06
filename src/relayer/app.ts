@@ -11,6 +11,8 @@ import {
   providers,
   sourceTx,
 } from "relayer-engine";
+import { storeRelayerEngineRelays } from "relayer-status-api";
+import { relayStoreConfiguration } from "../shared/storage-config";
 import { RedisStorage } from "relayer-engine/lib/storage/redis-storage";
 import { EVMChainId } from "@certusone/wormhole-sdk";
 import { processGenericRelayerVaa } from "./processor";
@@ -40,14 +42,14 @@ async function main() {
     wormholeRpcs,
   } = opts;
   app.spy(spyEndpoint);
-    const store = new RedisStorage({
-      redis,
-      redisClusterEndpoints,
-      redisCluster,
-      attempts: opts.workflows?.retries ?? 3,
-      namespace: name,
-      queueName: `${name}-relays`,
-    });
+  const store = new RedisStorage({
+    redis,
+    redisClusterEndpoints,
+    redisCluster,
+    attempts: opts.workflows?.retries ?? 3,
+    namespace: name,
+    queueName: `${name}-relays`,
+  });
 
   app.useStorage(store);
   app.logger(logger);
@@ -69,13 +71,15 @@ async function main() {
         logger,
         namespace: name,
         privateKeys: privateKeys!,
-        metrics: { registry: store.registry},
+        metrics: { registry: store.registry },
       })
     );
   }
   if (opts.fetchSourceTxhash) {
     app.use(sourceTx());
   }
+
+  storeRelayerEngineRelays<GRContext>(app, relayStoreConfiguration);
 
   // Set up middleware
   app.use(async (ctx: GRContext, next: Next) => {
@@ -84,6 +88,8 @@ async function main() {
     ctx.opts = { ...opts };
     next();
   });
+
+
 
   // Set up routes
   app.multiple(deepCopy(wormholeRelayers), processGenericRelayerVaa);

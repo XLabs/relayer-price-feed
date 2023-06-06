@@ -1,12 +1,13 @@
 {
   "name": "@xlabs-xyz/generic-relayer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "api": "npx ts-node ./src/api/api.ts",
     "relayer": "CONTRACTS_JSON_PATH=ethereum/ts-scripts/relayer/config/testnet/contracts.json ts-node src/relayer/app.ts --flag=testnet",
+    "build": "./build-contracts.sh && build-sdk.sh && tsc",
     "prettier": "prettier --write .",
-    "build": "tsc",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "watch": "tsc --watch",
     "version": "npm pkg get version --workspaces=false | tr -d \\\"",
@@ -22,6 +23,8 @@
     "clone": "^2.1.2",
     "koa": "^2.14.1",
     "koa-router": "^12.0.0",
+    "relayer-status-api": "file:../relayer-status-api",
+    "mongodb": "^5.5.0",
     "relayer-engine": "github:wormhole-foundation/relayer-engine#7698ed6",
     "yargs": "^17.7.1"
   },

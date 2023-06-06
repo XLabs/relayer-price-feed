@@ -1,0 +1,10 @@
+**/node_modules
+deploy
+
+ethereum/build
+ethereum/lib
+ethereum/cache
+
+sdk/lib
+sdk/src/anchor-idl
+sdk/src/anchor-ethers-contracts

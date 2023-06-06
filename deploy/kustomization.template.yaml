@@ -6,4 +6,4 @@ resources:
 configMapGenerator:
 - name: relayer-contracts
   files:
-    - ./deployed-contracts/contracts.0.0.1.json
+    - <CONTRACTS_PATH>
