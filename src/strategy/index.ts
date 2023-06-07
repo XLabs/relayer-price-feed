@@ -8,24 +8,7 @@ import {
   coalesceChainName,
   isEVMChain,
 } from "@certusone/wormhole-sdk";
-import { TokenInfo } from "../oracle";
-
-export type GlobalConfig = {
-  config: any;
-};
-
-export type UpdateAction = {
-  getTransactions(): ethers.Transaction[];
-};
-
-export type PricingData = {
-  tokenPrices: Map<TokenInfo, BigInt>;
-};
-
-export type StrategyConfig = {
-  supportedChainIds: SupportedChainId[];
-  relayerContracts: Record<SupportedChainId, Contract>;
-};
+export * from "./types";
 
 export interface UpdateStrategy {
   pushUpdates<
