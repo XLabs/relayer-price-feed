@@ -55,7 +55,7 @@ export class PriceOracle {
        * and we want to `continue` to the next loop cycle, it would be
        * nice to wait before trying again.
        */
-      this.sleep(strategy!.pollingIntervalMs());
+      await this.sleep(strategy!.pollingIntervalMs());
 
       try {
         const updatedPrices = await priceFetcher!.fetchPrices();
