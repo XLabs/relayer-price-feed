@@ -8,20 +8,22 @@ import {
   coalesceChainName,
   isEVMChain,
 } from "@certusone/wormhole-sdk";
-export * from "./types";
+import { GlobalConfig } from "../environment";
+import { PricingData } from "../prices/fetcher";
 
+export type ContractUpdate = {
+  chainId: SupportedChainId;
+  updateData: any;
+};
 export interface UpdateStrategy {
-  pushUpdates<
-    TPricing extends PricingData,
-    TConfig extends GlobalConfig,
-    TUpdate extends UpdateAction
-  >(
-    data: TPricing,
-    config: TConfig
-  ): Promise<TUpdate>;
-  getConfig<T extends StrategyConfig>(env: GlobalConfig): Promise<T>;
-  setLogger(logger: Logger): void;
+  name: string;
+  initialize(env: GlobalConfig, logger: Logger): Promise<void>;
   runFrequencyMs(): number;
+  calculateUpdates(pricingData: PricingData): Promise<ContractUpdate[]>;
+  pushUpdate(
+    signer: ethers.Signer,
+    update: ContractUpdate
+  ): Promise<ethers.providers.TransactionResponse>;
 }
 
 export type SimpleStrategyConfig = {

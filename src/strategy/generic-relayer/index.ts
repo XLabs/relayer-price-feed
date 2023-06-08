@@ -1,29 +1,45 @@
 import { ethers } from "ethers";
-import { ContractUpdate, UpdateStrategy } from "..";
-import { GenericRelayerStrategyConfig } from "./types";
+import { ContractUpdate, UpdateStrategy } from "../index";
+import { Logger } from "winston";
+import { GlobalConfig } from "../../environment";
+import { PricingData } from "../../prices/fetcher";
 
-//TODO change this to be in line with the updated type
-const strategy: UpdateStrategy = {
-  pollingIntervalMs: () => 1000,
-  tokenList: () => [],
-  pushNewPrices: async () => {},
-  setLogger: () => {},
-};
-
-//TODO this function should be on the UpdateStrategy interface
-async function sendUpdate(
-  signer: ethers.Signer,
-  globalEnv: any, //TODO correct type
-  strategyConfig: GenericRelayerStrategyConfig, //TODO correct type
-  contractUpdate: ContractUpdate
-) {
-  const abi = require("./DeliveryProvider.json");
-
-  const contract = new ethers.Contract(
-    strategyConfig.contractAddresses[contractUpdate.chainId],
-    abi,
-    signer
-  );
+type GenericRelayerStrategyEnvironment = {};
+let localEnv: GenericRelayerStrategyEnvironment | undefined;
+function getLocalEnv(): GenericRelayerStrategyEnvironment {
+  if (!localEnv) {
+    throw new Error("GenericRelayerStrategyEnvironment not initialized");
+  }
+  return localEnv;
 }
+
+function initialize(env: GlobalConfig, logger: Logger): Promise<void> {
+  return Promise.resolve();
+}
+
+function runFrequencyMs(): number {
+  return 1000;
+}
+
+function calculateUpdates(pricingData: PricingData): Promise<ContractUpdate[]> {
+  const updates: ContractUpdate[] = [];
+  return Promise.resolve(updates);
+}
+
+async function pushUpdate(
+  signer: ethers.Signer,
+  update: ContractUpdate
+): Promise<ethers.providers.TransactionResponse> {
+  throw new Error("Not implemented");
+}
+
+//This module should be treated as a singleton
+const strategy: UpdateStrategy = {
+  name: "GenericRelayer",
+  initialize,
+  runFrequencyMs,
+  calculateUpdates,
+  pushUpdate,
+};
 
 export default strategy;

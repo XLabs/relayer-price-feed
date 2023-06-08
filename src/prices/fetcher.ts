@@ -2,6 +2,8 @@ import axios from "axios";
 import { Logger } from "winston";
 import { TokenInfo } from "../oracle";
 
+export type PricingData = {};
+
 export interface PriceFetcher<T extends TokenInfo> {
   fetchPrices(): Promise<Map<T, BigInt>>;
   tokenList(): string[];
