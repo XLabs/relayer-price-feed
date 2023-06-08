@@ -10,6 +10,7 @@ import {
 import { ethers } from "ethers";
 import { PriceFetcher } from "./prices/fetcher";
 import { UpdateStrategy } from "./strategy";
+import { TokenInfo } from "./oracle";
 
 export const SUPPORTED_CHAIN_IDS = [
   CHAIN_ID_AVAX,
@@ -25,17 +26,10 @@ export const SUPPORTED_CHAIN_IDS = [
 export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 export type SupportedWallet = ethers.Wallet; // @TODO: Enable sui support again | RawSigner;
 
-export type TokenInfo = {
-  chainId: number;
-  symbol: string;
-  tokenContract: string;
-  coingeckoId: string; // @TODO: should this be removed and considered an implementation detail?
-};
-
-export type OracleConfig = {
+export type OracleConfig<T extends TokenInfo> = {
   env?: string;
   blockchainEnv?: string;
   logLevel?: string;
-  priceFetcher?: PriceFetcher;
+  priceFetcher?: PriceFetcher<T>;
   strategy?: UpdateStrategy;
 };

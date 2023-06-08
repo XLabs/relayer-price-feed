@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { Contract, Wallet } from "../contract";
-import { SupportedChainId, TokenInfo } from "../config";
+import { SupportedChainId } from "../config";
 import { Logger } from "winston";
 import {
   CHAIN_ID_FANTOM,
@@ -8,6 +8,7 @@ import {
   coalesceChainName,
   isEVMChain,
 } from "@certusone/wormhole-sdk";
+import { TokenInfo } from "../oracle";
 
 export type GlobalConfig = {
   config: any;
@@ -73,63 +74,58 @@ export class SimpleUpdateStrategy {
       const contract = this.config.relayerContracts[chainId];
 
       for (const token of this.config.supportedTokens) {
-        const tokenAddress =
-          this.config.tokenNativeToLocalAddress[chainId][token.tokenContract];
-
-        const currentPrice: BigInt = await contract.swapRate(tokenAddress);
-        const newPrice: BigInt = prices.get(token.coingeckoId)!;
-
-        const pricePercentageChange: number = Math.abs(
-          ((Number(newPrice) - Number(currentPrice)) / Number(currentPrice)) *
-            100
-        );
-
-        const newPriceFormatted = ethers.utils.formatUnits(
-          ethers.BigNumber.from(newPrice.toString()),
-          this.config.pricePrecision
-        );
-        const currentPriceFormatted = ethers.utils.formatUnits(
-          ethers.BigNumber.from(currentPrice.toString()),
-          this.config.pricePrecision
-        );
-
-        if (pricePercentageChange >= this.config.maxPriceChangePercentage) {
-          this.log(
-            "warn",
-            `Price change larger than max (current: ${currentPriceFormatted}, new: ${newPriceFormatted}), chainId: ${chainId}, token: ${tokenAddress} (${token.symbol}). Skipping update.`
-          );
-          continue;
-        } else if (
-          pricePercentageChange < this.config.minPriceChangePercentage
-        ) {
-          this.log(
-            "debug",
-            `Price change too small (current: ${currentPriceFormatted}, new: ${newPriceFormatted}), chainId: ${chainId}, token: ${tokenAddress} (${token.symbol}). Skipping update.`
-          );
-        }
-
-        this.log(
-          "info",
-          `Executing price update in ${coalesceChainName(chainId)}: ${
-            token.symbol
-          } going from ${currentPriceFormatted} to ${newPriceFormatted} (${pricePercentageChange.toFixed(
-            2
-          )}%).`,
-          {
-            chainId,
-            nativeAddress: token.tokenContract,
-            localTokenAddress: tokenAddress,
-            currentPrice: currentPrice,
-            newPrice: newPrice,
-            symbol: token.symbol,
-          }
-        );
-        await this.executePriceUpdate(
-          contract,
-          chainId,
-          tokenAddress,
-          newPrice
-        );
+        // const tokenAddress =
+        //   this.config.tokenNativeToLocalAddress[chainId][token.tokenContract];
+        // const currentPrice: BigInt = await contract.swapRate(tokenAddress);
+        // const newPrice: BigInt = prices.get(token.coingeckoId)!;
+        // const pricePercentageChange: number = Math.abs(
+        //   ((Number(newPrice) - Number(currentPrice)) / Number(currentPrice)) *
+        //     100
+        // );
+        // const newPriceFormatted = ethers.utils.formatUnits(
+        //   ethers.BigNumber.from(newPrice.toString()),
+        //   this.config.pricePrecision
+        // );
+        // const currentPriceFormatted = ethers.utils.formatUnits(
+        //   ethers.BigNumber.from(currentPrice.toString()),
+        //   this.config.pricePrecision
+        // );
+        // if (pricePercentageChange >= this.config.maxPriceChangePercentage) {
+        //   this.log(
+        //     "warn",
+        //     `Price change larger than max (current: ${currentPriceFormatted}, new: ${newPriceFormatted}), chainId: ${chainId}, token: ${tokenAddress} (${token.symbol}). Skipping update.`
+        //   );
+        //   continue;
+        // } else if (
+        //   pricePercentageChange < this.config.minPriceChangePercentage
+        // ) {
+        //   this.log(
+        //     "debug",
+        //     `Price change too small (current: ${currentPriceFormatted}, new: ${newPriceFormatted}), chainId: ${chainId}, token: ${tokenAddress} (${token.symbol}). Skipping update.`
+        //   );
+        // }
+        // this.log(
+        //   "info",
+        //   `Executing price update in ${coalesceChainName(chainId)}: ${
+        //     token.symbol
+        //   } going from ${currentPriceFormatted} to ${newPriceFormatted} (${pricePercentageChange.toFixed(
+        //     2
+        //   )}%).`,
+        //   {
+        //     chainId,
+        //     nativeAddress: token.tokenContract,
+        //     localTokenAddress: tokenAddress,
+        //     currentPrice: currentPrice,
+        //     newPrice: newPrice,
+        //     symbol: token.symbol,
+        //   }
+        // );
+        // await this.executePriceUpdate(
+        //   contract,
+        //   chainId,
+        //   tokenAddress,
+        //   newPrice
+        // );
       }
     }
   }

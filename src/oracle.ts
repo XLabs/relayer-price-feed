@@ -1,20 +1,26 @@
 import winston, { Logger } from "winston";
-import { OracleConfig, TokenInfo } from "./config";
+import { OracleConfig } from "./config";
 import { FetcherError } from "./prices/fetcher";
 import { StrategyError } from "./strategy/error";
 
-const defaultConfig: OracleConfig = {
+export type TokenInfo = {
+  chainId: number;
+  address: string;
+  symbol: string;
+};
+
+const defaultConfig: OracleConfig<any> = {
   env: "prod",
   blockchainEnv: "mainnet",
   logLevel: "error",
 };
 
 // @TODO: Add tests
-export class PriceOracle {
-  private config: OracleConfig;
+export class PriceOracle<T extends TokenInfo> {
+  private config: OracleConfig<T>;
   private logger: Logger;
 
-  constructor(config: OracleConfig) {
+  constructor(config: OracleConfig<T>) {
     this.config = { ...defaultConfig, ...config };
     this.logger = this.buildLogger(this.config.env!, this.config.logLevel!);
 
@@ -43,10 +49,8 @@ export class PriceOracle {
     const { priceFetcher, strategy } = this.config;
     this.logger.info(`
             Starting relayer-price-oracle...
-            Monitoring prices for: ${this.getTokenSymbols(
-              strategy!.tokenList()
-            ).join(",")}
-            Price check interval: ${strategy!.pollingIntervalMs()}ms
+            Monitoring prices for: ${priceFetcher!.tokenList().join(",")}
+            Price check interval: ${priceFetcher!.pollingIntervalMs()}ms
         `);
 
     while (true) {
@@ -55,11 +59,11 @@ export class PriceOracle {
        * and we want to `continue` to the next loop cycle, it would be
        * nice to wait before trying again.
        */
-      await this.sleep(strategy!.pollingIntervalMs());
+      await this.sleep(priceFetcher!.pollingIntervalMs());
 
       try {
         const updatedPrices = await priceFetcher!.fetchPrices();
-        strategy!.pushNewPrices(updatedPrices);
+        // strategy!.pushUpdates(updatedPrices);
       } catch (error: unknown) {
         if (error instanceof StrategyError) {
           this.logger.error(

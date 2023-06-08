@@ -9,4 +9,5 @@ export * from "./config";
 export * from "./oracle";
 export * from "./prices/fetcher";
 export * from "./contract";
+export * from "./strategy";
 export { EvmContract, EvmWallet } from "./contract/evm";

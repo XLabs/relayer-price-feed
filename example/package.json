@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "relayer-price-oracle": "file:../"
+    "relayer-price-oracle": "file:../",
+    "winston": "^3.9.0"
   },
   "keywords": [],
   "author": "",
