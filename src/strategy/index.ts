@@ -9,11 +9,35 @@ import {
   isEVMChain,
 } from "@certusone/wormhole-sdk";
 
+export type GlobalConfig = {
+  config: any;
+};
+
+export type UpdateAction = {
+  getTransactions(): ethers.Transaction[];
+};
+
+export type PricingData = {
+  tokenPrices: Map<TokenInfo, BigInt>;
+};
+
+export type StrategyConfig = {
+  supportedChainIds: SupportedChainId[];
+  relayerContracts: Record<SupportedChainId, Contract>;
+};
+
 export interface UpdateStrategy {
-  pushNewPrices(prices: Map<string, BigInt>): Promise<void>;
+  pushUpdates<
+    TPricing extends PricingData,
+    TConfig extends GlobalConfig,
+    TUpdate extends UpdateAction
+  >(
+    data: TPricing,
+    config: TConfig
+  ): Promise<TUpdate>;
+  getConfig<T extends StrategyConfig>(env: GlobalConfig): Promise<T>;
   setLogger(logger: Logger): void;
-  pollingIntervalMs(): number;
-  tokenList(): TokenInfo[];
+  runFrequencyMs(): number;
 }
 
 export type SimpleStrategyConfig = {
@@ -28,7 +52,7 @@ export type SimpleStrategyConfig = {
   minPriceChangePercentage: number; // lower band
 };
 
-export class SimpleUpdateStrategy implements UpdateStrategy {
+export class SimpleUpdateStrategy {
   private logger: Logger | undefined;
   constructor(private readonly config: SimpleStrategyConfig) {}
 
@@ -44,7 +68,7 @@ export class SimpleUpdateStrategy implements UpdateStrategy {
     return this.config.supportedTokens;
   }
 
-  public async pushNewPrices(prices: Map<string, BigInt>): Promise<void> {
+  public async pushUpdates(prices: Map<string, BigInt>): Promise<void> {
     for (const chainId of this.config.supportedChainIds) {
       const contract = this.config.relayerContracts[chainId];
 
