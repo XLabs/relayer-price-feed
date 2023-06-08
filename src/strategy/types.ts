@@ -7,7 +7,4 @@ export type PriceUpdate = {
 };
 export type ContractUpdate = {
   chainId: SupportedChainId;
-  sendTransaction: (
-    signer: ethers.Signer
-  ) => ethers.providers.TransactionResponse;
 };
