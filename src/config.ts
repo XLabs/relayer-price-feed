@@ -9,7 +9,7 @@ import {
 } from "@certusone/wormhole-sdk";
 import { ethers } from "ethers";
 import { UpdateStrategy } from "./strategy";
-import { TokenInfo } from "./oracle";
+import { TokenInfo } from "./feeder";
 import { PriceFetcher } from "./prices";
 
 export const SUPPORTED_CHAIN_IDS = [
@@ -26,7 +26,7 @@ export const SUPPORTED_CHAIN_IDS = [
 export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 export type SupportedWallet = ethers.Wallet; // @TODO: Enable sui support again | RawSigner;
 
-export type OracleConfig<T extends TokenInfo> = {
+export type FeederConfig = {
   env?: string;
   blockchainEnv?: string;
   logLevel?: string;

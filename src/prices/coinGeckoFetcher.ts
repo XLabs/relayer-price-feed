@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Logger } from "winston";
-import { TokenInfo } from "../oracle";
+import { TokenInfo } from "../feeder";
 import { ethers } from "ethers";
 
 export type PricingData = {

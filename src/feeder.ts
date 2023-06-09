@@ -1,8 +1,7 @@
 import winston, { Logger } from "winston";
-import { OracleConfig } from "./config";
+import { FeederConfig } from "./config";
 import { FetcherError } from "./prices/fetcher";
 import { StrategyError } from "./strategy/error";
-import grStrategy from "./strategy/generic-relayer";
 
 export type TokenInfo = {
   chainId: number;
@@ -10,18 +9,18 @@ export type TokenInfo = {
   symbol: string;
 };
 
-const defaultConfig: OracleConfig<any> = {
+const defaultConfig: FeederConfig = {
   env: "prod",
   blockchainEnv: "mainnet",
   logLevel: "error",
 };
 
 // @TODO: Add tests
-export class PriceOracle<T extends TokenInfo> {
-  private config: OracleConfig<T>;
+export class PriceFeeder {
+  private config: FeederConfig;
   private logger: Logger;
 
-  constructor(config: OracleConfig<T>) {
+  constructor(config: FeederConfig) {
     this.config = { ...defaultConfig, ...config };
     this.logger = this.buildLogger(this.config.env!, this.config.logLevel!);
 
@@ -34,7 +33,7 @@ export class PriceOracle<T extends TokenInfo> {
     }
 
     this.config.priceFetcher.setLogger(this.logger);
-    // this.config.strategy.setLogger(this.logger);
+    this.config.strategy.initialize(this.config, this.logger);
   }
 
   private buildLogger(env: string, logLevel: string): Logger {
@@ -64,8 +63,8 @@ Price check interval: ${priceFetcher!.pollingIntervalMs()}ms
 
       try {
         const updatedPrices = await priceFetcher!.fetchPrices();
-        const updates = grStrategy.calculateUpdates(updatedPrices);
-        // const txs = await grStrategy.pushUpdates(signers, updates);
+        const updates = strategy!.calculateUpdates(updatedPrices);
+        // const txs = await strategy!.pushUpdates(signers, updates);
       } catch (error: unknown) {
         if (error instanceof StrategyError) {
           this.logger.error(
@@ -82,15 +81,14 @@ Price check interval: ${priceFetcher!.pollingIntervalMs()}ms
     }
   }
 
-  private getTokenSymbols(supportedTokens: TokenInfo[]): string[] {
-    const symbols: string[] = Array.from(
-      new Set(supportedTokens?.map((token) => token.symbol))
-    );
-
-    return symbols;
-  }
-
   private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+}
+
+export function getPriceFeeder(config: FeederConfig): PriceFeeder {
+  const feeder = new PriceFeeder(config);
+  feeder.start();
+
+  return feeder;
 }
