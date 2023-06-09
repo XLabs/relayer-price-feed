@@ -12,7 +12,7 @@ import { Logger, createLogger, format, transports } from "winston";
 
 //Start! Set up the global configuration object
 
-//If the environment variable EVN is 'tilt', then load the global config from ./config/tilt.json
+//TODO read env
 //const globalConfig : GlobalConfig = process.env.ENV === "tilt" ? require("./config/tilt.json") : {};
 
 const globalConfig : GlobalConfig = {
