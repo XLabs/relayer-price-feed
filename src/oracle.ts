@@ -2,6 +2,7 @@ import winston, { Logger } from "winston";
 import { OracleConfig } from "./config";
 import { FetcherError } from "./prices/fetcher";
 import { StrategyError } from "./strategy/error";
+import grStrategy from "./strategy/generic-relayer";
 
 export type TokenInfo = {
   chainId: number;
@@ -48,10 +49,10 @@ export class PriceOracle<T extends TokenInfo> {
   public async start(): Promise<void> {
     const { priceFetcher, strategy } = this.config;
     this.logger.info(`
-            Starting relayer-price-oracle...
-            Monitoring prices for: ${priceFetcher!.tokenList().join(",")}
-            Price check interval: ${priceFetcher!.pollingIntervalMs()}ms
-        `);
+Starting relayer-price-oracle...
+Monitoring prices for: ${priceFetcher!.tokenList().join(",")}
+Price check interval: ${priceFetcher!.pollingIntervalMs()}ms
+`);
 
     while (true) {
       /**
@@ -63,7 +64,8 @@ export class PriceOracle<T extends TokenInfo> {
 
       try {
         const updatedPrices = await priceFetcher!.fetchPrices();
-        // strategy!.pushUpdates(updatedPrices);
+        const updates = grStrategy.calculateUpdates(updatedPrices);
+        // const txs = await grStrategy.pushUpdates(signers, updates);
       } catch (error: unknown) {
         if (error instanceof StrategyError) {
           this.logger.error(
