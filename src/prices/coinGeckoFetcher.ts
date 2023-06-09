@@ -35,6 +35,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
   logger: Logger | undefined;
   priceCache: any; // @TODO: Add price cache
   pricePrecision: number = 6; // Discuss with chase
+  defaultGasPrice = "30"; // in gwei
 
   constructor(tokens: CoingeckoTokenInfo[]) {
     this.tokens = tokens;
@@ -55,7 +56,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
 
   public async fetchPrices(): Promise<PricingData> {
     const tokens = this.tokenIds.join(",");
-    this.log(`Fetching prices for: ${tokens}`, "info");
+    this.logger!.info(`Fetching prices for: ${tokens}`);
     const { data, status } = await axios.get(
       `https://api.coingecko.com/api/v3/simple/price?ids=${tokens}&vs_currencies=usd`,
       {
@@ -71,6 +72,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
 
     const pricingData = {
       prices: this.formatPriceUpdates(data),
+      gasPrice: this.fetchGasPrices(),
     };
 
     return pricingData;
@@ -85,12 +87,6 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
 
     for (const token of this.tokens) {
       if (token.coingeckoId in prices) {
-        console.log("Token found: " + token);
-        console.log("Price: " + prices[token.coingeckoId].usd);
-        console.log(
-          "Formatted: ",
-          BigInt(prices[token.coingeckoId].usd * 10 ** 18)
-        );
         const price = prices[token.coingeckoId].usd.toFixed(
           this.pricePrecision
         );
@@ -98,17 +94,18 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       }
     }
 
-    this.log(`Formatting prices: ${JSON.stringify(prices)}`, "info");
-    for (const [key, value] of formattedPrices.entries()) {
-      console.log("Map: " + key + " = " + value);
-    }
-
     return formattedPrices;
   }
 
-  private log(message: string, level: string = "info"): void {
-    if (this.logger) {
-      this.logger.log(level, message);
+  private async fetchGasPrices(): Promise<Map<number, ethers.BigNumber>> {
+    const gasPrices = new Map<number, ethers.BigNumber>();
+    for (const token of this.tokens) {
+      gasPrices.set(
+        token.chainId,
+        ethers.utils.parseUnits(this.defaultGasPrice, "gwei")
+      ); // @TODO: This should actually come from a node
     }
+
+    return gasPrices;
   }
 }
