@@ -30,6 +30,6 @@ export type OracleConfig<T extends TokenInfo> = {
   env?: string;
   blockchainEnv?: string;
   logLevel?: string;
-  priceFetcher?: PriceFetcher<T>;
+  priceFetcher?: PriceFetcher;
   strategy?: UpdateStrategy;
 };

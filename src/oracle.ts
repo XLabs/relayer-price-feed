@@ -33,7 +33,7 @@ export class PriceOracle<T extends TokenInfo> {
     }
 
     this.config.priceFetcher.setLogger(this.logger);
-    this.config.strategy.setLogger(this.logger);
+    // this.config.strategy.setLogger(this.logger);
   }
 
   private buildLogger(env: string, logLevel: string): Logger {

@@ -1,8 +1,12 @@
 import axios from "axios";
 import { Logger } from "winston";
 import { TokenInfo } from "../oracle";
+import { ethers } from "ethers";
 
-export type PricingData = { isValid: boolean };
+export type PricingData = {
+  prices: Map<string, ethers.BigNumber>;
+};
+
 export type PriceFetchingConfig = {};
 
 export function getDefaultPricingData(): PricingData {
@@ -11,9 +15,9 @@ export function getDefaultPricingData(): PricingData {
   };
 }
 
-export interface PriceFetcher<T extends TokenInfo> {
+export interface PriceFetcher {
   initialize(config: PriceFetchingConfig): void;
-  fetchPrices(): Promise<Map<T, BigInt>>;
+  fetchPrices(): Promise<PricingData>;
   tokenList(): string[];
   setLogger(logger: Logger): void;
   pollingIntervalMs(): number;
@@ -25,11 +29,12 @@ export type CoingeckoTokenInfo = TokenInfo & {
   coingeckoId: string;
 };
 
-export class CoingeckoPriceFetcher implements PriceFetcher<CoingeckoTokenInfo> {
+export class CoingeckoPriceFetcher implements PriceFetcher {
   tokens: CoingeckoTokenInfo[];
   tokenIds: string[];
   logger: Logger | undefined;
   priceCache: any; // @TODO: Add price cache
+  pricePrecision: number = 6; // Discuss with chase
 
   constructor(tokens: CoingeckoTokenInfo[]) {
     this.tokens = tokens;
@@ -48,7 +53,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher<CoingeckoTokenInfo> {
     return 10 * 1000; // 10 seconds
   }
 
-  public async fetchPrices(): Promise<Map<CoingeckoTokenInfo, BigInt>> {
+  public async fetchPrices(): Promise<PricingData> {
     const tokens = this.tokenIds.join(",");
     this.log(`Fetching prices for: ${tokens}`, "info");
     const { data, status } = await axios.get(
@@ -64,15 +69,19 @@ export class CoingeckoPriceFetcher implements PriceFetcher<CoingeckoTokenInfo> {
       throw new FetcherError(`Error from coingecko status code: ${status}`);
     }
 
-    return this.formatPriceUpdates(data);
+    const pricingData = {
+      prices: this.formatPriceUpdates(data),
+    };
+
+    return pricingData;
   }
 
   public tokenList(): string[] {
     return Array.from(new Set(this.tokens.map((token) => token.symbol)));
   }
 
-  private formatPriceUpdates(prices: any): Map<CoingeckoTokenInfo, BigInt> {
-    const formattedPrices = new Map<CoingeckoTokenInfo, BigInt>();
+  private formatPriceUpdates(prices: any): Map<string, ethers.BigNumber> {
+    const formattedPrices = new Map<string, ethers.BigNumber>();
 
     for (const token of this.tokens) {
       if (token.coingeckoId in prices) {
@@ -82,13 +91,17 @@ export class CoingeckoPriceFetcher implements PriceFetcher<CoingeckoTokenInfo> {
           "Formatted: ",
           BigInt(prices[token.coingeckoId].usd * 10 ** 18)
         );
-        const price = prices[token.coingeckoId].usd;
-        formattedPrices.set(token, BigInt(price * 10 ** 18));
+        const price = prices[token.coingeckoId].usd.toFixed(
+          this.pricePrecision
+        );
+        formattedPrices.set(token.symbol, ethers.utils.parseUnits(price));
       }
     }
 
     this.log(`Formatting prices: ${JSON.stringify(prices)}`, "info");
-    this.log(`Formatting prices: ${JSON.stringify(formattedPrices)}`, "info");
+    for (const [key, value] of formattedPrices.entries()) {
+      console.log("Map: " + key + " = " + value);
+    }
 
     return formattedPrices;
   }

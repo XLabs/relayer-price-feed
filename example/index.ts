@@ -18,7 +18,11 @@ import { fromB64 } from "@mysten/sui.js";
 //TODO read env
 //const globalConfig : GlobalConfig = process.env.ENV === "tilt" ? require("./config/tilt.json") : {};
 
+<<<<<<< HEAD
 const tiltConfig: GlobalConfig = {
+=======
+const globalConfig: GlobalConfig = {
+>>>>>>> 06afb1f (Improve price fetcher return types)
   rpcs: new Map<ChainId, string>([
     [2, "http://localhost:8545"],
     [4, "http://localhost:8546"],
@@ -40,6 +44,7 @@ const logger = createLogger({
   ),
 });
 
+<<<<<<< HEAD
 const globalConfig: GlobalConfig = tiltConfig;
 
 //Next up, configure the price fetching process and run it!
@@ -51,6 +56,13 @@ const fixedPriceFetcherConfig: FixedPriceFetcherConfig = {
   gasPrices: new Map<ChainId, BigNumber>([
     [2, BigNumber.from(20_000_000_000)],
     [4, BigNumber.from(20_000_000_000)],
+=======
+//Next up, configure the price fetching process and run it!
+const fixedPriceFetcherConfig: FixedPriceFetcherConfig = {
+  nativeTokens: new Map<ChainId, number>([
+    [2, 5.0],
+    [4, 5.0],
+>>>>>>> 06afb1f (Improve price fetcher return types)
   ]),
   runFrequencyMs: 1000,
 };
@@ -67,9 +79,12 @@ const genericRelayerStrategyConfig: GenericRelayerStrategyConfig = {
     [2, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
     [4, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
   ]),
+<<<<<<< HEAD
   gasPriceTolerance: 0.1, //10%
   nativePriceTolerance: 0.1, //10%
   gasPriceMarkup: 0.1, //10%
+=======
+>>>>>>> 06afb1f (Improve price fetcher return types)
 };
 const genericRelayerStrategy = new GenericRelayerStrategy(
   genericRelayerStrategyConfig,
