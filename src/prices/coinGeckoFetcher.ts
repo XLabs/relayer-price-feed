@@ -2,9 +2,17 @@ import axios from "axios";
 import { Logger } from "winston";
 import { TokenInfo } from "../oracle";
 
-export type PricingData = {};
+export type PricingData = { isValid: boolean };
+export type PriceFetchingConfig = {};
+
+export function getDefaultPricingData(): PricingData {
+  return {
+    isValid: false,
+  };
+}
 
 export interface PriceFetcher<T extends TokenInfo> {
+  initialize(config: PriceFetchingConfig): void;
   fetchPrices(): Promise<Map<T, BigInt>>;
   tokenList(): string[];
   setLogger(logger: Logger): void;
@@ -29,6 +37,8 @@ export class CoingeckoPriceFetcher implements PriceFetcher<CoingeckoTokenInfo> {
       new Set(tokens.map((token) => token.coingeckoId))
     );
   }
+
+  public initialize(config: PriceFetchingConfig): Promise<void> {}
 
   public setLogger(logger: Logger): void {
     this.logger = logger;
