@@ -2,9 +2,10 @@ import winston, { Logger } from "winston";
 import { FeederConfig } from "./config";
 import { FetcherError } from "./prices/fetcher";
 import { StrategyError } from "./strategy/error";
+import { ChainId } from "@certusone/wormhole-sdk";
 
 export type TokenInfo = {
-  chainId: number;
+  chainId: ChainId;
   address: string;
   symbol: string;
 };

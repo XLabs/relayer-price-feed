@@ -1,7 +1,7 @@
 import { ChainId } from "@certusone/wormhole-sdk";
 import { BigNumber } from "ethers";
 
-//TODO export * from "./coinGeckoFetcher";
+export * from "./coinGeckoFetcher";
 export * from "./fixedPriceFetcher";
 
 export type PricingData = {

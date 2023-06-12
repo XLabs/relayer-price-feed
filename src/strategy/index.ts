@@ -9,6 +9,7 @@ export type ContractUpdate = {
   chainId: ChainId;
   updateData: any;
 };
+
 export interface UpdateStrategy {
   name: string;
   runFrequencyMs(): number;

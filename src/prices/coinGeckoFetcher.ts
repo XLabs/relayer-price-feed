@@ -2,26 +2,10 @@ import axios from "axios";
 import { Logger } from "winston";
 import { TokenInfo } from "../feeder";
 import { ethers } from "ethers";
-
-export type PricingData = {
-  prices: Map<string, ethers.BigNumber>;
-};
+import { ChainId } from "@certusone/wormhole-sdk";
+import { PriceFetcher, PricingData } from ".";
 
 export type PriceFetchingConfig = {};
-
-export function getDefaultPricingData(): PricingData {
-  return {
-    isValid: false,
-  };
-}
-
-export interface PriceFetcher {
-  initialize(config: PriceFetchingConfig): void;
-  fetchPrices(): Promise<PricingData>;
-  tokenList(): string[];
-  setLogger(logger: Logger): void;
-  pollingIntervalMs(): number;
-}
 
 export class FetcherError extends Error {}
 
@@ -29,32 +13,44 @@ export type CoingeckoTokenInfo = TokenInfo & {
   coingeckoId: string;
 };
 
+export type CoingeckoPricingData = PricingData & {
+  gasPrice: Map<ChainId, ethers.BigNumber>;
+};
+
+function getDefaultPricingData(): CoingeckoPricingData {
+  return {
+    isValid: false,
+    nativeTokens: new Map<ChainId, ethers.BigNumber>(),
+    gasPrice: new Map<ChainId, ethers.BigNumber>(),
+  };
+}
+
 export class CoingeckoPriceFetcher implements PriceFetcher {
+  logger: Logger;
   tokens: CoingeckoTokenInfo[];
   tokenIds: string[];
-  logger: Logger | undefined;
+  pricingData: CoingeckoPricingData = getDefaultPricingData();
   priceCache: any; // @TODO: Add price cache
   pricePrecision: number = 6; // Discuss with chase
   defaultGasPrice = "30"; // in gwei
 
-  constructor(tokens: CoingeckoTokenInfo[]) {
+  constructor(logger: Logger, tokens: CoingeckoTokenInfo[]) {
+    this.logger = logger;
     this.tokens = tokens;
     this.tokenIds = Array.from(
       new Set(tokens.map((token) => token.coingeckoId))
     );
   }
 
-  public initialize(config: PriceFetchingConfig): Promise<void> {}
-
-  public setLogger(logger: Logger): void {
-    this.logger = logger;
-  }
-
-  pollingIntervalMs(): number {
+  runFrequencyMs(): number {
     return 10 * 1000; // 10 seconds
   }
 
-  public async fetchPrices(): Promise<PricingData> {
+  getPricingData(): CoingeckoPricingData {
+    return this.pricingData;
+  }
+
+  public async updatePricingData(): Promise<void> {
     const tokens = this.tokenIds.join(",");
     this.logger!.info(`Fetching prices for: ${tokens}`);
     const { data, status } = await axios.get(
@@ -70,35 +66,30 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       throw new FetcherError(`Error from coingecko status code: ${status}`);
     }
 
-    const pricingData = {
-      prices: this.formatPriceUpdates(data),
-      gasPrice: this.fetchGasPrices(),
+    this.pricingData = {
+      isValid: true,
+      nativeTokens: this.formatPriceUpdates(data),
+      gasPrice: await this.fetchGasPrices(),
     };
-
-    return pricingData;
   }
 
-  public tokenList(): string[] {
-    return Array.from(new Set(this.tokens.map((token) => token.symbol)));
-  }
-
-  private formatPriceUpdates(prices: any): Map<string, ethers.BigNumber> {
-    const formattedPrices = new Map<string, ethers.BigNumber>();
+  private formatPriceUpdates(prices: any): Map<ChainId, ethers.BigNumber> {
+    const formattedPrices = new Map<ChainId, ethers.BigNumber>();
 
     for (const token of this.tokens) {
       if (token.coingeckoId in prices) {
         const price = prices[token.coingeckoId].usd.toFixed(
           this.pricePrecision
         );
-        formattedPrices.set(token.symbol, ethers.utils.parseUnits(price));
+        formattedPrices.set(token.chainId, ethers.utils.parseUnits(price));
       }
     }
 
     return formattedPrices;
   }
 
-  private async fetchGasPrices(): Promise<Map<number, ethers.BigNumber>> {
-    const gasPrices = new Map<number, ethers.BigNumber>();
+  private async fetchGasPrices(): Promise<Map<ChainId, ethers.BigNumber>> {
+    const gasPrices = new Map<ChainId, ethers.BigNumber>();
     for (const token of this.tokens) {
       gasPrices.set(
         token.chainId,

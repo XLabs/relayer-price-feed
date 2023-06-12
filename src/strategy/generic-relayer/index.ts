@@ -37,7 +37,6 @@ export class GenericRelayerStrategy implements UpdateStrategy {
   globalConfig: GlobalConfig;
   config: GenericRelayerStrategyConfig;
 
-
   constructor(
     config: GenericRelayerStrategyConfig,
     globalConfig: GlobalConfig,
@@ -56,28 +55,32 @@ export class GenericRelayerStrategy implements UpdateStrategy {
     pricingData: PricingData
   ): Promise<ContractUpdate[]> {
     //first, pull all the contract states.
-    const contractStates : Map<ChainId, GenRelayerPriceInfo[]>  = await this.readContractStates();
+    const contractStates: Map<ChainId, GenRelayerPriceInfo[]> =
+      await this.readContractStates();
 
-    const output : ContractUpdate[] = [];
+    const output: ContractUpdate[] = [];
     //go through every chain in the configuration and see if it needs any updates.
-    for(const chainId of this.config.contractAddresses.keys()) {
+    for (const chainId of this.config.contractAddresses.keys()) {
       const contractState = contractStates.get(chainId);
-      if(contractState === undefined) {
+      if (contractState === undefined) {
         this.logger.error(`No contract state found for chainId ${chainId}`);
         //If we fail to pull a contract state, we simply ignore that chain, rather than tanking
         //the entire process.
         continue;
         //throw new Error(`No contract state found for chainId ${chainId}`);
       }
-    
-      const priceDiscrepancies : GenRelayerPriceInfo[] = this.calculateRequiredUpdates(contractState, pricingData);
-      if(priceDiscrepancies.length > 0) {
+
+      const priceDiscrepancies: GenRelayerPriceInfo[] =
+        this.calculateRequiredUpdates(contractState, pricingData);
+      if (priceDiscrepancies.length > 0) {
         output.push({
           chainId: chainId,
           updateData: {
-            contractAddress: this.config.contractAddresses.get(chainId) as string,
+            contractAddress: this.config.contractAddresses.get(
+              chainId
+            ) as string,
             priceInfos: priceDiscrepancies,
-          }
+          },
         });
       }
     }
@@ -87,37 +90,57 @@ export class GenericRelayerStrategy implements UpdateStrategy {
 
   //Currently mutates the state of this class,
   //but could easily be made to return the contract state result.
-  private async readContractStates() : Promise<Map<ChainId, GenRelayerPriceInfo[]>> {
-    const contractStates : Map<ChainId, GenRelayerPriceInfo[]> 
-      = new Map<ChainId, GenRelayerPriceInfo[]>();
+  private async readContractStates(): Promise<
+    Map<ChainId, GenRelayerPriceInfo[]>
+  > {
+    const contractStates: Map<ChainId, GenRelayerPriceInfo[]> = new Map<
+      ChainId,
+      GenRelayerPriceInfo[]
+    >();
 
-    for(const chainId of this.config.contractAddresses.keys()) {
+    for (const chainId of this.config.contractAddresses.keys()) {
       const rpc = this.globalConfig.rpcs.get(chainId);
       const contractAddress = this.config.contractAddresses.get(chainId);
-      if(!rpc) {
-        this.logger.error(`Generic Relayer readContractState expected and RPC url but found none: chainId ${chainId}`);
+      if (!rpc) {
+        this.logger.error(
+          `Generic Relayer readContractState expected and RPC url but found none: chainId ${chainId}`
+        );
         continue;
-      }  
-      if(!contractAddress) {
-        this.logger.error(`Generic Relayer readContractState expected a contract address but found none: chainId ${chainId}`);
+      }
+      if (!contractAddress) {
+        this.logger.error(
+          `Generic Relayer readContractState expected a contract address but found none: chainId ${chainId}`
+        );
         continue;
-      }  
+      }
       const ethersProvider = new ethers.providers.JsonRpcProvider(rpc);
-      const deliveryProvider = DeliveryProvider__factory.connect(contractAddress, ethersProvider);  
-      
-      for(const deliveryChainId of this.config.contractAddresses.keys()) {
+      const deliveryProvider = DeliveryProvider__factory.connect(
+        contractAddress,
+        ethersProvider
+      );
+
+      for (const deliveryChainId of this.config.contractAddresses.keys()) {
         const gasPrice = await deliveryProvider.gasPrice(deliveryChainId);
-        const nativePrice = await deliveryProvider.nativeCurrencyPrice(deliveryChainId);
-        if(gasPrice === null || nativePrice === null || gasPrice === undefined || nativePrice === undefined) {
-          this.logger.error(`Generic Relayer readContractState failed to pull gas price or native price for delivery chainId ${deliveryChainId} from chainId ${chainId}`);
+        const nativePrice = await deliveryProvider.nativeCurrencyPrice(
+          deliveryChainId
+        );
+        if (
+          gasPrice === null ||
+          nativePrice === null ||
+          gasPrice === undefined ||
+          nativePrice === undefined
+        ) {
+          this.logger.error(
+            `Generic Relayer readContractState failed to pull gas price or native price for delivery chainId ${deliveryChainId} from chainId ${chainId}`
+          );
           continue;
-        }  
-        const priceInfo : GenRelayerPriceInfo = {
-          chainId: deliveryChainId,
-          priceData: {gasPrice: gasPrice, nativePrice: nativePrice}
         }
+        const priceInfo: GenRelayerPriceInfo = {
+          chainId: deliveryChainId,
+          priceData: { gasPrice: gasPrice, nativePrice: nativePrice },
+        };
         let priceInfos = contractStates.get(chainId);
-        if(priceInfos === undefined) {
+        if (priceInfos === undefined) {
           priceInfos = [];
           contractStates.set(chainId, priceInfos);
         }
@@ -125,59 +148,82 @@ export class GenericRelayerStrategy implements UpdateStrategy {
       }
     }
 
-    return contractStates;  
+    return contractStates;
   }
 
-  private calculateRequiredUpdates(contractState: GenRelayerPriceInfo[], pricingData: PricingData) : GenRelayerPriceInfo[] {
-    const requiredUpdates : GenRelayerPriceInfo[] = [];
+  private calculateRequiredUpdates(
+    contractState: GenRelayerPriceInfo[],
+    pricingData: PricingData
+  ): GenRelayerPriceInfo[] {
+    const requiredUpdates: GenRelayerPriceInfo[] = [];
 
-    for(const priceInfo of contractState) {
+    for (const priceInfo of contractState) {
       const newNativePrice = pricingData.nativeTokens.get(priceInfo.chainId);
-      const rawNewGasPrice = pricingData.gasPrices.get(priceInfo.chainId)
+      const rawNewGasPrice = pricingData.gasPrices.get(priceInfo.chainId);
 
-      if(newNativePrice === undefined) {
-        this.logger.error(`No native price found for chainId ${priceInfo.chainId}`);
+      if (newNativePrice === undefined) {
+        this.logger.error(
+          `No native price found for chainId ${priceInfo.chainId}`
+        );
         //Don't tank the process, just skip this
         continue;
         //throw new Error(`No native price found for chainId ${priceInfo.chainId}`);
       }
-      if(rawNewGasPrice === undefined) {
-        this.logger.error(`No gas price found for chainId ${priceInfo.chainId}`);
+      if (rawNewGasPrice === undefined) {
+        this.logger.error(
+          `No gas price found for chainId ${priceInfo.chainId}`
+        );
         //Don't tank the process, just skip this
         continue;
         //throw new Error(`No gas price found for chainId ${priceInfo.chainId}`);
       }
 
-      const markedUpGasPrice = this.ethersMul(rawNewGasPrice, this.config.gasPriceMarkup + 1) ;
+      const markedUpGasPrice = this.ethersMul(
+        rawNewGasPrice,
+        this.config.gasPriceMarkup + 1
+      );
 
-      if(priceInfo.priceData === null) {
-        this.logger.error(`Price data object was null for chainId ${priceInfo.chainId}`);
+      if (priceInfo.priceData === null) {
+        this.logger.error(
+          `Price data object was null for chainId ${priceInfo.chainId}`
+        );
         //Don't tank the process, just skip this
         continue;
         //throw new Error(`Price data object was null for chainId ${priceInfo.chainId}`);
       }
 
-      const nativePriceDelta = newNativePrice.sub(priceInfo.priceData.nativePrice).abs();
-      const gasPriceDelta = markedUpGasPrice.sub(priceInfo.priceData.gasPrice).abs();
+      const nativePriceDelta = newNativePrice
+        .sub(priceInfo.priceData.nativePrice)
+        .abs();
+      const gasPriceDelta = markedUpGasPrice
+        .sub(priceInfo.priceData.gasPrice)
+        .abs();
 
-      const nativePriceTolerance = this.ethersMul(priceInfo.priceData.nativePrice,this.config.nativePriceTolerance);
-      const gasPriceTolerance = this.ethersMul(priceInfo.priceData.gasPrice,this.config.gasPriceTolerance);
+      const nativePriceTolerance = this.ethersMul(
+        priceInfo.priceData.nativePrice,
+        this.config.nativePriceTolerance
+      );
+      const gasPriceTolerance = this.ethersMul(
+        priceInfo.priceData.gasPrice,
+        this.config.gasPriceTolerance
+      );
 
-      if(nativePriceDelta.gt(nativePriceTolerance) || gasPriceDelta.gt(gasPriceTolerance)) {
+      if (
+        nativePriceDelta.gt(nativePriceTolerance) ||
+        gasPriceDelta.gt(gasPriceTolerance)
+      ) {
         requiredUpdates.push({
           chainId: priceInfo.chainId,
           priceData: {
             nativePrice: newNativePrice,
             gasPrice: markedUpGasPrice,
-          }
+          },
         });
       }
     }
 
-
-
     return requiredUpdates;
-  }  
+  }
 
   public async pushUpdate(
     signer: ethers.Signer,
@@ -249,15 +295,15 @@ export class GenericRelayerStrategy implements UpdateStrategy {
   }
 
   //Utility function to get around big number issues
-  public ethersMul(a : BigNumber, b : number) : BigNumber {
-      if (a == null || a.isZero() || b == null || b === 0) {
-          return BigNumber.from(0);
-      }
-  
-      const aFloat = parseFloat(ethers.utils.formatEther(a));
-  
-      const resultFloat = aFloat * b;
-  
-      return ethers.utils.parseEther(resultFloat.toFixed(18));
+  public ethersMul(a: BigNumber, b: number): BigNumber {
+    if (a == null || a.isZero() || b == null || b === 0) {
+      return BigNumber.from(0);
+    }
+
+    const aFloat = parseFloat(ethers.utils.formatEther(a));
+
+    const resultFloat = aFloat * b;
+
+    return ethers.utils.parseEther(resultFloat.toFixed(18));
   }
 }
