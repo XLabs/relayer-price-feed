@@ -7,13 +7,14 @@ import { PriceFetcher, PricingData } from "./prices";
 import { PriceOracle } from "./oracle";
 import { ChainId } from "@certusone/wormhole-sdk";
 
-function getWallet(chainId: ChainId, globalConfig : GlobalConfig): ethers.Signer {
+function getWallet(
+  chainId: ChainId,
+  globalConfig: GlobalConfig
+): ethers.Signer {
   const pk = globalConfig.privateKeys.get(chainId);
   const rpc = globalConfig.rpcs.get(chainId);
   if (!pk || !rpc) {
-    throw new Error(
-      "No private key or rpc configured for chainId: " + chainId
-    );
+    throw new Error("No private key or rpc configured for chainId: " + chainId);
   }
   const provider = new ethers.providers.JsonRpcProvider(rpc);
   const wallet = new ethers.Wallet(pk, provider);

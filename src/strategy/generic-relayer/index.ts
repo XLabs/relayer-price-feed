@@ -1,17 +1,33 @@
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { ContractUpdate, UpdateStrategy } from "../index";
 import { Logger } from "winston";
 import { GlobalConfig } from "../../environment";
 import { PricingData } from "../../prices";
 import { ChainId } from "@certusone/wormhole-sdk";
+import {
+  DeliveryProvider,
+  DeliveryProviderStructs,
+} from "./tmp/DeliveryProvider";
+import { DeliveryProvider__factory } from "./tmp/DeliveryProvider__factory";
+import { DeliveryProviderContractState } from "./utils/currentPricing";
 
+//This configuration will become much more complex over time,
+//The first logical addition would be to allow different configurations on different corridors.
 export type GenericRelayerStrategyConfig = {
-  contractAddresses : Map<number, string>;
-}
+  contractAddresses: Map<ChainId, string>;
+  gasPriceTolerance: number; //The amount gas can move without triggering an update, ex. .05 = 5%
+  nativePriceTolerance: number; //The amount native price can move without triggering an update, ex. .05 = 5%
+  gasPriceMarkup: number; //The amount gas is marked up by when updating, ex. .05 = 5%
+};
 
 export type GenericRelayerStrategyUpdateData = {
   contractAddress: string;
-  nativePrice: number;
+  priceInfos: GenRelayerPriceInfo[];
+};
+
+interface GenRelayerPriceInfo {
+  chainId: ChainId;
+  priceData: { gasPrice: BigNumber; nativePrice: BigNumber } | null;
 }
 
 //This module should be treated as a singleton
@@ -21,7 +37,12 @@ export class GenericRelayerStrategy implements UpdateStrategy {
   globalConfig: GlobalConfig;
   config: GenericRelayerStrategyConfig;
 
-  constructor(config: GenericRelayerStrategyConfig, globalConfig: GlobalConfig, logger: Logger) {
+
+  constructor(
+    config: GenericRelayerStrategyConfig,
+    globalConfig: GlobalConfig,
+    logger: Logger
+  ) {
     this.config = config;
     this.globalConfig = globalConfig;
     this.logger = logger;
@@ -30,31 +51,213 @@ export class GenericRelayerStrategy implements UpdateStrategy {
   public runFrequencyMs(): number {
     return 1000;
   }
-  
-  public async calculateUpdates(pricingData: PricingData): Promise<ContractUpdate[]> {
-    const updates: ContractUpdate[] = [];
 
-    //TODO way too dumb
-    pricingData.nativeTokens.forEach((value, key) => {
-      const update = {
-        chainId: key as ChainId,
-        updateData: {
-          contractAddress: this.config.contractAddresses.get(key),
-          nativePrice: value
-        }
+  public async calculateUpdates(
+    pricingData: PricingData
+  ): Promise<ContractUpdate[]> {
+    //first, pull all the contract states.
+    const contractStates : Map<ChainId, GenRelayerPriceInfo[]>  = await this.readContractStates();
+
+    const output : ContractUpdate[] = [];
+    //go through every chain in the configuration and see if it needs any updates.
+    for(const chainId of this.config.contractAddresses.keys()) {
+      const contractState = contractStates.get(chainId);
+      if(contractState === undefined) {
+        this.logger.error(`No contract state found for chainId ${chainId}`);
+        //If we fail to pull a contract state, we simply ignore that chain, rather than tanking
+        //the entire process.
+        continue;
+        //throw new Error(`No contract state found for chainId ${chainId}`);
       }
-      updates.push(update);
-    });
+    
+      const priceDiscrepancies : GenRelayerPriceInfo[] = this.calculateRequiredUpdates(contractState, pricingData);
+      if(priceDiscrepancies.length > 0) {
+        output.push({
+          chainId: chainId,
+          updateData: {
+            contractAddress: this.config.contractAddresses.get(chainId) as string,
+            priceInfos: priceDiscrepancies,
+          }
+        });
+      }
+    }
 
-    return Promise.resolve(updates);
+    return output;
   }
-  
-  
-  public async pushUpdate(signer: ethers.Signer, update: ContractUpdate): Promise<ethers.providers.TransactionResponse> {
+
+  //Currently mutates the state of this class,
+  //but could easily be made to return the contract state result.
+  private async readContractStates() : Promise<Map<ChainId, GenRelayerPriceInfo[]>> {
+    const contractStates : Map<ChainId, GenRelayerPriceInfo[]> 
+      = new Map<ChainId, GenRelayerPriceInfo[]>();
+
+    for(const chainId of this.config.contractAddresses.keys()) {
+      const rpc = this.globalConfig.rpcs.get(chainId);
+      const contractAddress = this.config.contractAddresses.get(chainId);
+      if(!rpc) {
+        this.logger.error(`Generic Relayer readContractState expected and RPC url but found none: chainId ${chainId}`);
+        continue;
+      }  
+      if(!contractAddress) {
+        this.logger.error(`Generic Relayer readContractState expected a contract address but found none: chainId ${chainId}`);
+        continue;
+      }  
+      const ethersProvider = new ethers.providers.JsonRpcProvider(rpc);
+      const deliveryProvider = DeliveryProvider__factory.connect(contractAddress, ethersProvider);  
+      
+      for(const deliveryChainId of this.config.contractAddresses.keys()) {
+        const gasPrice = await deliveryProvider.gasPrice(deliveryChainId);
+        const nativePrice = await deliveryProvider.nativeCurrencyPrice(deliveryChainId);
+        if(gasPrice === null || nativePrice === null || gasPrice === undefined || nativePrice === undefined) {
+          this.logger.error(`Generic Relayer readContractState failed to pull gas price or native price for delivery chainId ${deliveryChainId} from chainId ${chainId}`);
+          continue;
+        }  
+        const priceInfo : GenRelayerPriceInfo = {
+          chainId: deliveryChainId,
+          priceData: {gasPrice: gasPrice, nativePrice: nativePrice}
+        }
+        let priceInfos = contractStates.get(chainId);
+        if(priceInfos === undefined) {
+          priceInfos = [];
+          contractStates.set(chainId, priceInfos);
+        }
+        priceInfos.push(priceInfo);
+      }
+    }
+
+    return contractStates;  
+  }
+
+  private calculateRequiredUpdates(contractState: GenRelayerPriceInfo[], pricingData: PricingData) : GenRelayerPriceInfo[] {
+    const requiredUpdates : GenRelayerPriceInfo[] = [];
+
+    for(const priceInfo of contractState) {
+      const newNativePrice = pricingData.nativeTokens.get(priceInfo.chainId);
+      const rawNewGasPrice = pricingData.gasPrices.get(priceInfo.chainId)
+
+      if(newNativePrice === undefined) {
+        this.logger.error(`No native price found for chainId ${priceInfo.chainId}`);
+        //Don't tank the process, just skip this
+        continue;
+        //throw new Error(`No native price found for chainId ${priceInfo.chainId}`);
+      }
+      if(rawNewGasPrice === undefined) {
+        this.logger.error(`No gas price found for chainId ${priceInfo.chainId}`);
+        //Don't tank the process, just skip this
+        continue;
+        //throw new Error(`No gas price found for chainId ${priceInfo.chainId}`);
+      }
+
+      const markedUpGasPrice = this.ethersMul(rawNewGasPrice, this.config.gasPriceMarkup + 1) ;
+
+      if(priceInfo.priceData === null) {
+        this.logger.error(`Price data object was null for chainId ${priceInfo.chainId}`);
+        //Don't tank the process, just skip this
+        continue;
+        //throw new Error(`Price data object was null for chainId ${priceInfo.chainId}`);
+      }
+
+      const nativePriceDelta = newNativePrice.sub(priceInfo.priceData.nativePrice).abs();
+      const gasPriceDelta = markedUpGasPrice.sub(priceInfo.priceData.gasPrice).abs();
+
+      const nativePriceTolerance = this.ethersMul(priceInfo.priceData.nativePrice,this.config.nativePriceTolerance);
+      const gasPriceTolerance = this.ethersMul(priceInfo.priceData.gasPrice,this.config.gasPriceTolerance);
+
+      if(nativePriceDelta.gt(nativePriceTolerance) || gasPriceDelta.gt(gasPriceTolerance)) {
+        requiredUpdates.push({
+          chainId: priceInfo.chainId,
+          priceData: {
+            nativePrice: newNativePrice,
+            gasPrice: markedUpGasPrice,
+          }
+        });
+      }
+    }
+
+
+
+    return requiredUpdates;
+  }  
+
+  public async pushUpdate(
+    signer: ethers.Signer,
+    update: ContractUpdate
+  ): Promise<ethers.providers.TransactionResponse> {
     //TODO this actually isn't right, should instatiate the delivery provider type instead
-    const contract = new ethers.Contract(update.updateData.contractAddress, ["function setNativePrice(uint256)"], signer);
-    const tx = await contract.setNativePrice(update.updateData.nativePrice);
-    return tx;
+    const targetContractAddress = this.config.contractAddresses.get(
+      update.chainId
+    );
+    if (targetContractAddress === undefined) {
+      this.logger.error(
+        `No contract address found for chainId ${update.chainId}`
+      );
+      throw new Error(
+        `No contract address found for chainId ${update.chainId}`
+      );
+    }
+
+    const contract = DeliveryProvider__factory.connect(
+      targetContractAddress,
+      signer
+    );
+
+    const transactionUpdateArray: DeliveryProviderStructs.UpdatePriceStruct[] =
+      [];
+
+    for (const priceInfo of update.updateData
+      .priceInfos as GenRelayerPriceInfo[]) {
+      if (priceInfo.priceData === null) {
+        this.logger.error(
+          `Price data object was null for chainId ${priceInfo.chainId}`
+        );
+        throw new Error(
+          `Price data object was null for chainId ${priceInfo.chainId}`
+        );
+      }
+
+      // This chunk of code will be useful if the process ever updates more than just prices.
+      // const chainConfigUpdate = {
+      //   chainId: priceInfo.chainId,
+      //   updateAssetConversionBuffer: false, //not supported by this process
+      //   updateDeliverGasOverhead: false, //not supported by this process
+      //   updatePrice: true,
+      //   updateMaximumBudget: false, //not supported by this process
+      //   updateTargetChainAddress: false, //not supported by this process
+      //   updateSupportedChain: false, //not supported by this process
+      //   isSupported: false, //ignored
+      //   buffer: 0, //ignored
+      //   bufferDenominator: 0, //ignored
+      //   newWormholeFee: 0, //ignored?
+      //   newGasOverhead: 0, //ignored
+      //   gasPrice: priceInfo.updatePriceGas,
+      //   nativeCurrencyPrice: priceInfo.updatePriceNative,
+      //   targetChainAddress: null,
+      //   maximumTotalBudget: null,
+      // };
+      // updates.push(chainConfigUpdate);
+
+      const priceUpdate = {
+        chainId: priceInfo.chainId,
+        gasPrice: priceInfo.priceData.gasPrice,
+        nativeCurrencyPrice: priceInfo.priceData.nativePrice,
+      };
+      transactionUpdateArray.push(priceUpdate);
+    }
+
+    const output = await contract.updatePrices(transactionUpdateArray);
+    return output;
   }
 
+  //Utility function to get around big number issues
+  public ethersMul(a : BigNumber, b : number) : BigNumber {
+      if (a == null || a.isZero() || b == null || b === 0) {
+          return BigNumber.from(0);
+      }
+  
+      const aFloat = parseFloat(ethers.utils.formatEther(a));
+  
+      const resultFloat = aFloat * b;
+  
+      return ethers.utils.parseEther(resultFloat.toFixed(18));
+  }
 }

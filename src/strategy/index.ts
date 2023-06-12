@@ -18,4 +18,3 @@ export interface UpdateStrategy {
     update: ContractUpdate
   ): Promise<ethers.providers.TransactionResponse>;
 }
-
