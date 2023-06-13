@@ -19,15 +19,11 @@ export type CoingeckoProviderOptions = {
   gasPrice?: Map<ChainId, ethers.BigNumber>;
 };
 
-export type CoingeckoPricingData = PricingData & {
-  gasPrice: Map<ChainId, ethers.BigNumber>;
-};
-
-function getDefaultPricingData(): CoingeckoPricingData {
+function getDefaultPricingData(): PricingData {
   return {
     isValid: false,
     nativeTokens: new Map<ChainId, ethers.BigNumber>(),
-    gasPrice: new Map<ChainId, ethers.BigNumber>(),
+    gasPrices: new Map<ChainId, ethers.BigNumber>(),
   };
 }
 
@@ -37,7 +33,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
   tokens: CoingeckoTokenInfo[];
   tokenIds: string[];
   rpcs: Map<ChainId, string>;
-  pricingData: CoingeckoPricingData = getDefaultPricingData();
+  pricingData: PricingData = getDefaultPricingData();
   priceCache: any; // @TODO: Add price cache
   pricePrecision: number = 6; // Discuss with chase
   defaultGasPrice = ethers.utils.parseUnits("30", "gwei");
@@ -57,7 +53,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
     return 10 * 1000; // 10 seconds
   }
 
-  getPricingData(): CoingeckoPricingData {
+  getPricingData(): PricingData {
     return this.pricingData;
   }
 
@@ -80,7 +76,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
     this.pricingData = {
       isValid: true,
       nativeTokens: this.formatPriceUpdates(data),
-      gasPrice: await this.fetchGasPrices(),
+      gasPrices: await this.fetchGasPrices(),
     };
 
     this.logger.info("Pricing Data valid:", this.pricingData.isValid);
@@ -88,7 +84,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       "Pricing Data nativeTokens:",
       this.pricingData.nativeTokens
     );
-    this.logger.info("Pricing Data gasPrice:", this.pricingData.gasPrice);
+    this.logger.info("Pricing Data gasPrice:", this.pricingData.gasPrices);
   }
 
   private formatPriceUpdates(prices: any): Map<ChainId, ethers.BigNumber> {
