@@ -4,12 +4,8 @@ import { Logger } from "winston";
 import { GlobalConfig } from "../../environment";
 import { PricingData } from "../../prices";
 import { ChainId } from "@certusone/wormhole-sdk";
-import {
-  DeliveryProvider,
-  DeliveryProviderStructs,
-} from "./tmp/DeliveryProvider";
+import { DeliveryProviderStructs } from "./tmp/DeliveryProvider";
 import { DeliveryProvider__factory } from "./tmp/DeliveryProvider__factory";
-import { DeliveryProviderContractState } from "./utils/currentPricing";
 
 //This configuration will become much more complex over time,
 //The first logical addition would be to allow different configurations on different corridors.
