@@ -13,6 +13,12 @@ export type CoingeckoTokenInfo = TokenInfo & {
   coingeckoId: string;
 };
 
+export type CoingeckoProviderOptions = {
+  tokens: CoingeckoTokenInfo[];
+  rpcs: Map<ChainId, string>;
+  gasPrice?: Map<ChainId, ethers.BigNumber>;
+};
+
 export type CoingeckoPricingData = PricingData & {
   gasPrice: Map<ChainId, ethers.BigNumber>;
 };
@@ -27,19 +33,24 @@ function getDefaultPricingData(): CoingeckoPricingData {
 
 export class CoingeckoPriceFetcher implements PriceFetcher {
   logger: Logger;
+  config: CoingeckoProviderOptions;
   tokens: CoingeckoTokenInfo[];
   tokenIds: string[];
+  rpcs: Map<ChainId, string>;
   pricingData: CoingeckoPricingData = getDefaultPricingData();
   priceCache: any; // @TODO: Add price cache
   pricePrecision: number = 6; // Discuss with chase
-  defaultGasPrice = "30"; // in gwei
+  defaultGasPrice = ethers.utils.parseUnits("30", "gwei");
 
-  constructor(logger: Logger, tokens: CoingeckoTokenInfo[]) {
+  constructor(logger: Logger, config: CoingeckoProviderOptions) {
     this.logger = logger;
-    this.tokens = tokens;
+    this.config = config;
+    this.tokens = config.tokens;
     this.tokenIds = Array.from(
-      new Set(tokens.map((token) => token.coingeckoId))
+      new Set(config.tokens.map((token) => token.coingeckoId))
     );
+
+    this.rpcs = config.rpcs;
   }
 
   runFrequencyMs(): number {
@@ -71,6 +82,13 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       nativeTokens: this.formatPriceUpdates(data),
       gasPrice: await this.fetchGasPrices(),
     };
+
+    this.logger.info("Pricing Data valid:", this.pricingData.isValid);
+    this.logger.info(
+      "Pricing Data nativeTokens:",
+      this.pricingData.nativeTokens
+    );
+    this.logger.info("Pricing Data gasPrice:", this.pricingData.gasPrice);
   }
 
   private formatPriceUpdates(prices: any): Map<ChainId, ethers.BigNumber> {
@@ -91,12 +109,21 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
   private async fetchGasPrices(): Promise<Map<ChainId, ethers.BigNumber>> {
     const gasPrices = new Map<ChainId, ethers.BigNumber>();
     for (const token of this.tokens) {
-      gasPrices.set(
-        token.chainId,
-        ethers.utils.parseUnits(this.defaultGasPrice, "gwei")
-      ); // @TODO: This should actually come from a node
+      const gasPrice = await this.fetchGasPriceForChain(token.chainId);
+      gasPrices.set(token.chainId, gasPrice);
+
+      this.logger.debug(`Gas price for chain ${token.chainId}: ${gasPrice}`);
     }
 
     return gasPrices;
+  }
+
+  private async fetchGasPriceForChain(
+    chaindId: ChainId
+  ): Promise<ethers.BigNumber> {
+    const gasPrice =
+      this.config.gasPrice?.get(chaindId) || this.defaultGasPrice;
+
+    return gasPrice;
   }
 }
