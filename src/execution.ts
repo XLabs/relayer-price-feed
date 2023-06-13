@@ -4,7 +4,6 @@ import { Logger } from "winston";
 import { ContractUpdate, UpdateStrategy } from "./strategy";
 import { GlobalConfig } from "./environment";
 import { PriceFetcher, PricingData } from "./prices";
-import { PriceOracle } from "./oracle";
 import { ChainId } from "@certusone/wormhole-sdk";
 
 function getWallet(
