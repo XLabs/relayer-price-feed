@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "api": "npx ts-node ./src/api/api.ts",
-    "relayer": "CONTRACTS_JSON_PATH=ethereum/ts-scripts/relayer/config/testnet/contracts.json ts-node src/relayer/app.ts --flag=testnet",
-    "test-message": "ts-node ./ethereum/ts-scripts/relayer/mockIntegration/messageTest.ts --from 6 --to 14",
+    "api": "npx ts-node ./src/api.ts",
+    "relayer": "CONTRACTS_JSON_PATH=ethereum/ts-scripts/relayer/config/testnet/contracts.json node lib/relayer/app.js --flag=testnet",
+    "test-message": "ts-node ./ts-scripts/relayer/mockIntegration/messageTest.ts --from 6 --to 14",
     "build": "./build-contracts.sh && build-sdk.sh && tsc",
     "prettier": "prettier --write .",
     "typecheck": "tsc --noEmit --skipLibCheck",
@@ -21,12 +21,13 @@
     "@improbable-eng/grpc-web-node-http-transport": "^0.15.0",
     "@types/clone": "^2.1.1",
     "@types/koa": "^2.13.5",
+    "@xlabs-xyz/relayer-status-api": "github:xlabs/relayer-status-api#9e564ee254a1a67624416072d0bd93d49362dfe8",
     "clone": "^2.1.2",
+    "ioredis": "^5.3.2",
     "koa": "^2.14.1",
     "koa-router": "^12.0.0",
-    "relayer-status-api": "file:../relayer-status-api",
     "mongodb": "^5.5.0",
-    "relayer-engine": "github:wormhole-foundation/relayer-engine#7698ed6",
+    "relayer-engine": "github:wormhole-foundation/relayer-engine#634c241d139bcd92a003cdedcdbc75fed1589c5b",
     "yargs": "^17.7.1"
   },
   "peerDependencies": {

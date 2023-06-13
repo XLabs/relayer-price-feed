@@ -11,7 +11,7 @@ import {
   providers,
   sourceTx,
 } from "relayer-engine";
-import { storeRelayerEngineRelays } from "relayer-status-api";
+import { storeRelayerEngineRelays, RelayStorageContext } from "@xlabs-xyz/relayer-status-api";
 import { relayStoreConfiguration } from "../shared/storage-config";
 import { RedisStorage } from "relayer-engine/lib/storage/redis-storage";
 import { EVMChainId } from "@certusone/wormhole-sdk";
@@ -19,17 +19,15 @@ import { processGenericRelayerVaa } from "./processor";
 import { Logger } from "winston";
 import deepCopy from "clone";
 import { loadAppConfig } from "./env";
-
 export type GRContext = StandardRelayerContext & {
   deliveryProviders: Record<EVMChainId, string>;
   wormholeRelayers: Record<EVMChainId, string>;
   opts: StandardRelayerAppOpts;
-};
+} & RelayStorageContext;
 
 async function main() {
   const { env, opts, deliveryProviders, wormholeRelayers } = await loadAppConfig();
   const logger = opts.logger!;
-  logger.debug("Redis config: ", opts.redis);
 
   const app = new RelayerApp<GRContext>(env, opts);
   const {
@@ -71,7 +69,7 @@ async function main() {
         logger,
         namespace: name,
         privateKeys: privateKeys!,
-        metrics: { registry: store.registry },
+        metrics: { enabled: true, registry: store.registry },
       })
     );
   }
@@ -79,17 +77,15 @@ async function main() {
     app.use(sourceTx());
   }
 
-  storeRelayerEngineRelays<GRContext>(app, relayStoreConfiguration);
+  storeRelayerEngineRelays<GRContext>(app, { ...relayStoreConfiguration, logger });
 
   // Set up middleware
   app.use(async (ctx: GRContext, next: Next) => {
     ctx.deliveryProviders = deepCopy(deliveryProviders);
     ctx.wormholeRelayers = deepCopy(wormholeRelayers);
     ctx.opts = { ...opts };
-    next();
+    await next();
   });
-
-
 
   // Set up routes
   app.multiple(deepCopy(wormholeRelayers), processGenericRelayerVaa);
@@ -112,7 +108,7 @@ function runApi(storage: RedisStorage, { port, redis }: any, logger: Logger) {
   if (redis?.host) {
     app.use(storage.storageKoaUI("/ui"));
   }
-
+  
   port = Number(port) || 3000;
   app.listen(port, () => {
     logger.info(`Running on ${port}...`);

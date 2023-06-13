@@ -1,11 +1,12 @@
 import * as fs from "fs/promises";
+import { ClusterOptions, RedisOptions } from 'ioredis';
 import yargs from "yargs";
 import {
   Environment,
   ProvidersOpts,
-  RedisOptions,
   StandardRelayerAppOpts,
 } from "relayer-engine";
+
 import {
   CHAIN_ID_ETH,
   CHAIN_ID_BSC,

@@ -51,7 +51,8 @@ async function processDelivery(ctx: GRContext) {
     });
     return;
   }
-  processDeliveryInstruction(ctx, deliveryVaa, ctx.vaaBytes!);
+  
+  await processDeliveryInstruction(ctx, deliveryVaa, ctx.vaaBytes!);
 }
 
 async function processRedelivery(ctx: GRContext) {
@@ -85,7 +86,7 @@ async function processRedelivery(ctx: GRContext) {
     return;
   } else {
     ctx.logger.info("Redelivery is valid, proceeding with redelivery");
-    processDeliveryInstruction(ctx, delivery, originalVaa.bytes, {
+    await processDeliveryInstruction(ctx, delivery, originalVaa.bytes, {
       newReceiverValue: redeliveryVaa.newRequestedReceiverValue,
       newExecutionInfo: redeliveryVaa.newEncodedExecutionInfo,
       redeliveryHash: ctx.vaa!.hash,
@@ -105,9 +106,9 @@ function isValidRedelivery(
     );
     ctx.logger.info(
       "Original targetChain: " +
-        delivery.targetChainId +
-        " Redelivery targetChain: " +
-        redelivery.targetChainId
+      delivery.targetChainId +
+      " Redelivery targetChain: " +
+      redelivery.targetChainId
     );
     return false;
   }
@@ -125,9 +126,9 @@ function isValidRedelivery(
     );
     ctx.logger.info(
       "Original refund: " +
-        deliveryExecutionInfo.targetChainRefundPerGasUnused.toBigInt().toLocaleString() +
-        " Redelivery: " +
-        redeliveryExecutionInfo.targetChainRefundPerGasUnused.toBigInt().toLocaleString()
+      deliveryExecutionInfo.targetChainRefundPerGasUnused.toBigInt().toLocaleString() +
+      " Redelivery: " +
+      redeliveryExecutionInfo.targetChainRefundPerGasUnused.toBigInt().toLocaleString()
     );
     return false;
   }
@@ -137,9 +138,9 @@ function isValidRedelivery(
     );
     ctx.logger.info(
       "Original refund: " +
-        delivery.requestedReceiverValue.toBigInt().toLocaleString(),
+      delivery.requestedReceiverValue.toBigInt().toLocaleString(),
       +" Redelivery: " +
-        redelivery.newRequestedReceiverValue.toBigInt().toLocaleString()
+      redelivery.newRequestedReceiverValue.toBigInt().toLocaleString()
     );
     return false;
   }

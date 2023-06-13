@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "build",
+    "outDir": "lib",
     "target": "esnext",
     "module": "CommonJS",
     "moduleResolution": "node",
