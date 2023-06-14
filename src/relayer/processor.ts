@@ -200,13 +200,13 @@ async function processDeliveryInstruction(
     : delivery.encodedExecutionInfo);
   const budget = receiverValue.add(maxRefund);
 
-  await ctx.wallets.onEVM(chainId, async ({ wallet }) => {
+  await ctx.wallets.onEVM(chainId, async ({ wallet }: { wallet: ethers.Wallet }) => {
     const wormholeRelayer = IWormholeRelayerDelivery__factory.connect(
       ctx.wormholeRelayers[chainId],
       wallet
     );
 
-    const encodedVMs = results.map((v) => v.bytes);
+    const encodedVMs = results.map((v: ParsedVaaWithBytes) => v.bytes);
     const packedOverrides = overrides ? packOverrides(overrides) : [];
     const gasUnitsEstimate = await wormholeRelayer.estimateGas.deliver(encodedVMs, deliveryVaa, wallet.address, packedOverrides, {
       value: budget,

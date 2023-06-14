@@ -14,7 +14,7 @@ const logger = getLogger();
 
   const apiConfig: ApiConfiguration = {
     port: 4200,
-    prefix: '/relay-status-api',
+    prefix: '/relay-status',
     logger: logger.child({ module: 'api' }),
   };
 

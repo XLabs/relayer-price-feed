@@ -194,7 +194,7 @@ function loadAndMergeConfig(flag: Flag): GRRelayerAppConfig {
     redisCluster: isRedisCluster
       ? {
           dnsLookup: (address: any, callback: any) => callback(null, address),
-          slotsRefreshTimeout: 1000,
+          slotsRefreshTimeout: 10000,
           redisOptions: {
             tls: process.env.REDIS_TLS ? {} : base.redis?.tls,
             username: process.env.REDIS_USERNAME,
