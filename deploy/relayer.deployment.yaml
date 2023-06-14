@@ -43,6 +43,9 @@ spec:
             - configMapRef:
                 name: generic-relayer-env
                 optional: false
+            - secretRef:
+                name: generic-relayer-db
+                optional: false
       volumes:
         - name: relayer-contracts
           configMap:

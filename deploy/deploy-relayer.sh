@@ -31,7 +31,8 @@ fi
 #
 
 CONTRACTS_FILE_NAME="contracts.$TAG.json"
-TARGET_CONTRACTS_PATH="./deployed-contracts/$CONTRACTS_FILE_NAME"
+TARGET_CONTRACTS_DIR="./deployed-contracts/$ENV"
+TARGET_CONTRACTS_PATH="$TARGET_CONTRACTS_DIR/$CONTRACTS_FILE_NAME"
 SOURCE_CONTRACTS_PATH="../ethereum/ts-scripts/relayer/config/$ENV/contracts.json"
 
 if [ ! -f "../ethereum/ts-scripts/relayer/config/$ENV/contracts.json" ]; then
@@ -40,6 +41,10 @@ if [ ! -f "../ethereum/ts-scripts/relayer/config/$ENV/contracts.json" ]; then
     set -e
     cd ../ && bash -c build-contracts.sh && cd -
     set +e
+fi
+
+if [ ! -d "$TARGET_CONTRACTS_DIR" ]; then
+    mkdir -p $TARGET_CONTRACTS_DIR
 fi
 
 if [ -f "$TARGET_CONTRACTS_PATH" ]; then
