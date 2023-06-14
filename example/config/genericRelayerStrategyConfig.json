@@ -1,0 +1,13 @@
+{
+    "contractAddresses": {
+        "2": "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
+        "4": "0x1ef9e15c3bbf0555860b5009B51722027134d53a"
+    },
+    "gasPriceTolerance": 0.05, 
+    "nativePriceTolerance": 0.05,
+    "gasPriceMarkup": 0.1, 
+    "maxIncrease": 0.5,
+    "maxDecrease": 0.5, 
+    "overrideSafeGuard": false,
+    "runFrequencyMs" : 1000
+}

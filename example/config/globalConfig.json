@@ -1,0 +1,6 @@
+{
+    "rpcs":{
+        "2":"localhost:8545",
+        "4":"localhost:8546"
+    }
+}

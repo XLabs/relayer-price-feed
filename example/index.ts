@@ -8,6 +8,8 @@ import {
   executeStrategies,
   GenericRelayerStrategy,
   GenericRelayerStrategyConfig,
+  loadPrivateKeys,
+  loadGlobalConfig,
 } from "../src";
 import { Logger, createLogger, format, transports } from "winston";
 import { BigNumber } from "ethers";
@@ -15,20 +17,14 @@ import { fromB64 } from "@mysten/sui.js";
 
 //Start! Set up the global configuration object
 
-//TODO read env
+//In testing, we load private keys into the environment via dotenv.
+//If this differs in your environment, you can just remove this.
+import * as dotenv from "dotenv";
+dotenv.config({ path: "./example/.env.tilt"});
+
 //const globalConfig : GlobalConfig = process.env.ENV === "tilt" ? require("./config/tilt.json") : {};
 
-const tiltConfig: GlobalConfig = {
-  rpcs: new Map<ChainId, string>([
-    [2, "http://localhost:8545"],
-    [4, "http://localhost:8546"],
-  ]),
-  privateKeys: new Map<ChainId, string>([
-    //These are the owner keys of the contracts in tilt
-    [2, "0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"],
-    [4, "0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"],
-  ]),
-};
+const tiltConfig: GlobalConfig = loadGlobalConfig("./example/config/globalConfig.json");
 const logger = createLogger({
   transports: [new transports.Console()],
   format: format.combine(
@@ -43,17 +39,7 @@ const logger = createLogger({
 const globalConfig: GlobalConfig = tiltConfig;
 
 //Next up, configure the price fetching process and run it!
-const fixedPriceFetcherConfig: FixedPriceFetcherConfig = {
-  nativeTokens: new Map<ChainId, BigNumber>([
-    [2, BigNumber.from(5.0)],
-    [4, BigNumber.from(5.0)],
-  ]),
-  gasPrices: new Map<ChainId, BigNumber>([
-    [2, BigNumber.from(20_000_000_000)],
-    [4, BigNumber.from(20_000_000_000)],
-  ]),
-  runFrequencyMs: 1000,
-};
+const fixedPriceFetcherConfig: FixedPriceFetcherConfig = FixedPriceFetcher.loadConfig("./example/config/fixedPriceFetcherConfig.json");
 const priceFetchingProcess = new FixedPriceFetcher(
   fixedPriceFetcherConfig,
   globalConfig,
@@ -62,15 +48,7 @@ const priceFetchingProcess = new FixedPriceFetcher(
 executePriceFetching(priceFetchingProcess, logger);
 
 //Finally, configure all the strategies and then run them!
-const genericRelayerStrategyConfig: GenericRelayerStrategyConfig = {
-  contractAddresses: new Map<ChainId, string>([
-    [2, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
-    [4, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
-  ]),
-  gasPriceTolerance: 0.1, //10%
-  nativePriceTolerance: 0.1, //10%
-  gasPriceMarkup: 0.1, //10%
-};
+const genericRelayerStrategyConfig: GenericRelayerStrategyConfig = GenericRelayerStrategy.loadConfig("./example/config/genericRelayerStrategyConfig.json");
 const genericRelayerStrategy = new GenericRelayerStrategy(
   genericRelayerStrategyConfig,
   globalConfig,

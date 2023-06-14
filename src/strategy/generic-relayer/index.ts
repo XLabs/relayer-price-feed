@@ -6,6 +6,7 @@ import { PricingData } from "../../prices";
 import { ChainId } from "@certusone/wormhole-sdk";
 import { DeliveryProviderStructs } from "./tmp/DeliveryProvider";
 import { DeliveryProvider__factory } from "./tmp/DeliveryProvider__factory";
+import * as fs from "fs";
 
 //This configuration will become much more complex over time,
 //The first logical addition would be to allow different configurations on different corridors.
@@ -14,6 +15,9 @@ export type GenericRelayerStrategyConfig = {
   gasPriceTolerance: number; //The amount gas can move without triggering an update, ex. .05 = 5%
   nativePriceTolerance: number; //The amount native price can move without triggering an update, ex. .05 = 5%
   gasPriceMarkup: number; //The amount gas is marked up by when updating, ex. .05 = 5%
+  maxIncrease: number; //The maximum amount a value can increase by without triggering the safeguard
+  maxDecrease: number; //The maximum amount a value can decrease by without triggering the safeguard
+  overrideSafeGuard: boolean; //If true, the maxIncrease and maxDecrease values are ignored.
 };
 
 export type GenericRelayerStrategyUpdateData = {
@@ -42,6 +46,36 @@ export class GenericRelayerStrategy implements UpdateStrategy {
     this.globalConfig = globalConfig;
     this.logger = logger;
   }
+
+  public static loadConfig(path : string) : GenericRelayerStrategyConfig {
+    const file = fs.readFileSync(path, 'utf-8');
+    const config = JSON.parse(file);
+
+    const contractAddresses = new Map<ChainId, string>();
+    for (const [chainId, address] of Object.entries(config.contractAddresses)) {
+      contractAddresses.set(parseInt(chainId) as ChainId, address as any);
+    }
+    const gasPriceTolerance = config.gasPriceTolerance;
+    const nativePriceTolerance = config.nativePriceTolerance;
+    const gasPriceMarkup = config.gasPriceMarkup;
+    const maxIncrease = config.maxIncrease;
+    const maxDecrease = config.maxDecrease;
+    const overrideSafeGuard = !!config.overrideSafeGuard;
+
+    if(!gasPriceTolerance || !nativePriceTolerance || !gasPriceMarkup || !maxIncrease || !maxDecrease ) {
+      throw new Error("Invalid config file supplied to GenericRelayerStrategy");
+    }
+
+    return {
+      contractAddresses,
+      gasPriceTolerance,
+      nativePriceTolerance,
+      gasPriceMarkup,
+      maxIncrease,
+      maxDecrease,
+      overrideSafeGuard
+    }
+  } 
 
   public runFrequencyMs(): number {
     return 1000;
@@ -109,6 +143,10 @@ export class GenericRelayerStrategy implements UpdateStrategy {
         );
         continue;
       }
+
+      console.log("current RPC");
+      console.log(rpc);
+
       const ethersProvider = new ethers.providers.JsonRpcProvider(rpc);
       const deliveryProvider = DeliveryProvider__factory.connect(
         contractAddress,

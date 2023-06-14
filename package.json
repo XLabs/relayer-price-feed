@@ -15,6 +15,7 @@
     "@certusone/wormhole-sdk": "^0.9.18",
     "@mysten/sui.js": "^0.34.1",
     "axios": "^1.4.0",
+    "dotenv": "^16.1.4",
     "ethers": "^5.7.2",
     "ts-node": "^10.9.1",
     "winston": "^3.9.0"
