@@ -1,11 +1,12 @@
 {
-  "name": "relayer-price-oracle",
+  "name": "relayer-price-feed",
   "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
     "test": "jest --silent=false",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "tilt": "ENV=tilt ts-node example/index.ts"
   },
   "keywords": [],
   "author": "Cristian Iturri",
@@ -14,7 +15,9 @@
     "@certusone/wormhole-sdk": "^0.9.18",
     "@mysten/sui.js": "^0.34.1",
     "axios": "^1.4.0",
+    "dotenv": "^16.1.4",
     "ethers": "^5.7.2",
+    "ts-node": "^10.9.1",
     "winston": "^3.9.0"
   },
   "devDependencies": {
