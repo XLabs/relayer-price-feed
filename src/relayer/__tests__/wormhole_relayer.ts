@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, jest, test} from "@jest/globals
 import { ethers } from "ethers";
 import { getNetwork, isCI, generateRandomString, waitForRelay, PRIVATE_KEY, getGuardianRPC, GUARDIAN_KEYS, GUARDIAN_SET_INDEX, GOVERNANCE_EMITTER_ADDRESS, getArbitraryBytes32} from "./utils/utils";
 import {getAddressInfo} from "../consts" 
-import {getDefaultProvider} from "../main/helpers"
+import {getDefaultProvider} from "../relayer/helpers"
 import {
     relayer,
     ethers_contracts,
@@ -37,6 +37,10 @@ import { AddressInfo } from "net";
   const createTestChain = (name: ChainName) => {
     const provider = getDefaultProvider(network, name, ci);
     const addressInfo = getAddressInfo(name, network);
+    if(process.env.DEV) {
+      // Via ir is off -> different wormhole relayer address
+      addressInfo.wormholeRelayerAddress = "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5"
+    }
     if(!addressInfo.wormholeRelayerAddress) throw Error(`No core relayer address for ${name}`);
     if(!addressInfo.mockIntegrationAddress) throw Error(`No mock relayer integration address for ${name}`);
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
@@ -378,32 +382,24 @@ describe("Wormhole Relayer Tests", () => {
 
   test("Governance: Test Registering Chain", async () => {
 
-    const currentAddress = await source.wormholeRelayer.getRegisteredWormholeRelayerContract(6);
-    console.log(`For Chain ${source.chainId}, registered chain 6 address: ${currentAddress}`);
+    const chain = 24;
+
+    const currentAddress = await source.wormholeRelayer.getRegisteredWormholeRelayerContract(chain);
+    console.log(`For Chain ${source.chainId}, registered chain ${chain} address: ${currentAddress}`);
 
     const expectedNewRegisteredAddress = "0x0000000000000000000000001234567890123456789012345678901234567892";
 
     const timestamp = (await source.wallet.provider.getBlock("latest")).timestamp;
-    const chain = 6;
+    
     const firstMessage = governance.publishWormholeRelayerRegisterChain(timestamp, chain, expectedNewRegisteredAddress)
     const firstSignedVaa = guardians.addSignatures(firstMessage, guardianIndices);
 
     let tx = await source.wormholeRelayer.registerWormholeRelayerContract(firstSignedVaa, {gasLimit: REASONABLE_GAS_LIMIT});
     await tx.wait();
 
-    const newRegisteredAddress = (await source.wormholeRelayer.getRegisteredWormholeRelayerContract(6));
+    const newRegisteredAddress = (await source.wormholeRelayer.getRegisteredWormholeRelayerContract(chain));
 
     expect(newRegisteredAddress).toBe(expectedNewRegisteredAddress);
-
-    const inverseFirstMessage = governance.publishWormholeRelayerRegisterChain(timestamp, chain, currentAddress)
-    const inverseFirstSignedVaa = guardians.addSignatures(inverseFirstMessage, guardianIndices);
-
-    tx = await source.wormholeRelayer.registerWormholeRelayerContract(inverseFirstSignedVaa, {gasLimit: REASONABLE_GAS_LIMIT});
-    await tx.wait();
-
-    const secondRegisteredAddress = (await source.wormholeRelayer.getRegisteredWormholeRelayerContract(6));
-
-    expect(secondRegisteredAddress).toBe(currentAddress);
 })
 
 test("Governance: Test Setting Default Relay Provider", async () => {

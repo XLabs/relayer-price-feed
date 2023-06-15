@@ -24,12 +24,12 @@ const TESTNET: {[K in ChainName]?: AddressInfo} = {
 
 const DEVNET: {[K in ChainName]?: AddressInfo} = {
   ethereum: {
-    wormholeRelayerAddress: "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5",
+    wormholeRelayerAddress: "0xE66C1Bc1b369EF4F376b84373E3Aa004E8F4C083",
     mockDeliveryProviderAddress: "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
     mockIntegrationAddress: "0x0eb0dD3aa41bD15C706BC09bC03C002b7B85aeAC",
   },
   bsc: {
-    wormholeRelayerAddress: "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5",
+    wormholeRelayerAddress: "0xE66C1Bc1b369EF4F376b84373E3Aa004E8F4C083",
     mockDeliveryProviderAddress: "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
     mockIntegrationAddress: "0x0eb0dD3aa41bD15C706BC09bC03C002b7B85aeAC",
   },
@@ -86,6 +86,7 @@ export const RPCS_BY_CHAIN: {
     aptos: "https://fullnode.mainnet.aptoslabs.com/",
     near: "https://rpc.mainnet.near.org",
     xpla: "https://dimension-lcd.xpla.dev",
+    sui: "https://fullnode.mainnet.sui.io:443",
     terra2: "https://phoenix-lcd.terra.dev",
     terra: "https://columbus-fcd.terra.dev",
     injective: "https://k8s.mainnet.lcd.injective.network",
