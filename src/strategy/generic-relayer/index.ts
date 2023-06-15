@@ -239,6 +239,34 @@ export class GenericRelayerStrategy implements UpdateStrategy {
         this.config.gasPriceTolerance
       );
 
+      if(!this.config.overrideSafeGuard){
+        const newMaxNativePrice = this.ethersMul(
+          priceInfo.priceData.nativePrice,
+          this.config.maxIncrease + 1);
+        const newMinNativePrice = this.ethersMul(
+          priceInfo.priceData.nativePrice,
+          1 - this.config.maxDecrease);
+        if(newNativePrice.gt(newMaxNativePrice) || newNativePrice.lt(newMinNativePrice)){
+          this.logger.error(
+            `New native price ${newNativePrice.toString()} is outside of bounds for chainId ${priceInfo.chainId}`
+          );
+          continue;
+        }
+
+        const newMaxGasPrice = this.ethersMul(
+          priceInfo.priceData.gasPrice,
+          this.config.maxIncrease + 1);
+        const newMinGasPrice = this.ethersMul(
+          priceInfo.priceData.gasPrice,
+          1 - this.config.maxDecrease);
+        if(markedUpGasPrice.gt(newMaxGasPrice) || markedUpGasPrice.lt(newMinGasPrice)){ 
+          this.logger.error(
+            `New gas price ${markedUpGasPrice.toString()} is outside of bounds for chainId ${priceInfo.chainId}`
+          );
+          continue;
+        }
+      }
+
       if (
         nativePriceDelta.gt(nativePriceTolerance) ||
         gasPriceDelta.gt(gasPriceTolerance)
