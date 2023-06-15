@@ -14,6 +14,16 @@
   "wormholeRelayers": [
     {
       "chainId": 2,
+      "address": "0xE66C1Bc1b369EF4F376b84373E3Aa004E8F4C083"
+    },
+    {
+      "chainId": 4,
+      "address": "0xE66C1Bc1b369EF4F376b84373E3Aa004E8F4C083"
+    }
+  ],
+  "wormholeRelayersDev": [
+    {
+      "chainId": 2,
       "address": "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5"
     },
     {

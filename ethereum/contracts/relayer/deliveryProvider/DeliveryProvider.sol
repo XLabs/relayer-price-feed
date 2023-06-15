@@ -18,12 +18,11 @@ contract DeliveryProvider is DeliveryProviderGovernance, IDeliveryProvider {
     using LocalNativeLib for LocalNative;
 
     error CallerNotApproved(address msgSender);
-
-    address immutable wormhole;
-
-    constructor(address _wormhole) {
-        wormhole = _wormhole;
-    }
+    error PriceIsZero(uint16 chain);
+    error Overflow(uint256 value, uint256 max);
+    error MaxRefundGreaterThanGasLimitCost(uint256 maxRefund, uint256 gasLimitCost);
+    error MaxRefundGreaterThanGasLimitCostOnSourceChain(uint256 maxRefund, uint256 gasLimitCost);
+    error ExceedsMaximumBudget(uint16 targetChain, uint256 exceedingValue, uint256 maximumBudget);
 
     function quoteEvmDeliveryPrice(
         uint16 targetChain,
@@ -34,19 +33,24 @@ contract DeliveryProvider is DeliveryProviderGovernance, IDeliveryProvider {
         view
         returns (LocalNative nativePriceQuote, GasPrice targetChainRefundPerUnitGasUnused)
     {
-        targetChainRefundPerUnitGasUnused = gasPrice(targetChain);
-        Wei costOfProvidingFullGasLimit = gasLimit.toWei(targetChainRefundPerUnitGasUnused);
-        Wei transactionFee =
-            quoteDeliveryOverhead(targetChain) + gasLimit.toWei(quoteGasPrice(targetChain));
-        Wei receiverValueCost = quoteAssetCost(targetChain, receiverValue);
-        nativePriceQuote = (
-            transactionFee.max(costOfProvidingFullGasLimit) + receiverValueCost
-                + wormholeMessageFee()
-        ).asLocalNative();
-        require(
-            receiverValue.asNative() + costOfProvidingFullGasLimit <= maximumBudget(targetChain),
-            "Exceeds maximum budget"
-        );
+        (uint16 buffer, uint16 denominator) = assetConversionBuffer(targetChain);
+        targetChainRefundPerUnitGasUnused = GasPrice.wrap(gasPrice(targetChain).unwrap() * (denominator) / (uint256(denominator) + buffer));
+        
+        TargetNative maxRefund = gasLimit.toWei(targetChainRefundPerUnitGasUnused).asTargetNative();
+        TargetNative gasLimitCost = gasLimit.toWei(gasPrice(targetChain)).asTargetNative();
+        LocalNative maxRefundInSourceCurrency = quoteAssetCost(targetChain, maxRefund);
+        LocalNative gasLimitCostInSourceCurrency = quoteGasCost(targetChain, gasLimit);
+        LocalNative receiverValueCost = quoteAssetCost(targetChain, receiverValue);
+        nativePriceQuote = quoteDeliveryOverhead(targetChain) + gasLimitCostInSourceCurrency + receiverValueCost;
+        if(maxRefundInSourceCurrency.unwrap() > gasLimitCostInSourceCurrency.unwrap()) {
+            revert MaxRefundGreaterThanGasLimitCostOnSourceChain(maxRefundInSourceCurrency.unwrap(), gasLimitCostInSourceCurrency.unwrap());
+        } 
+        if(maxRefund.unwrap() > gasLimitCost.unwrap()) {
+            revert MaxRefundGreaterThanGasLimitCost(maxRefund.unwrap(), gasLimitCost.unwrap());
+        }
+        if(receiverValue.asNative() + gasLimitCost.asNative() > maximumBudget(targetChain).asNative()) {
+            revert ExceedsMaximumBudget(targetChain, receiverValue.unwrap() + gasLimitCost.unwrap(), maximumBudget(targetChain).unwrap());
+        }
     }
 
     function quoteDeliveryPrice(
@@ -87,12 +91,10 @@ contract DeliveryProvider is DeliveryProviderGovernance, IDeliveryProvider {
         return sourceChainAmount.asNative().convertAsset(
             nativeCurrencyPrice(sourceChain),
             nativeCurrencyPrice(targetChain),
-            (buffer),
+            (bufferDenominator),
             (uint32(buffer) + bufferDenominator),
-            false
-        )
-            // round down
-            .asTargetNative();
+            false  // round down
+        ).asTargetNative();
     }
 
     //Returns the address on this chain that rewards should be sent to
@@ -119,25 +121,26 @@ contract DeliveryProvider is DeliveryProviderGovernance, IDeliveryProvider {
      *
      */
 
-    function wormholeMessageFee() public view returns (Wei) {
-        return Wei.wrap(IWormhole(wormhole).messageFee());
-    }
-
     //Returns the delivery overhead fee required to deliver a message to the target chain, denominated in this chain's wei.
-    function quoteDeliveryOverhead(uint16 targetChain) public view returns (Wei nativePriceQuote) {
-        Gas overhead = deliverGasOverhead(targetChain);
-        Wei targetFees = overhead.toWei(gasPrice(targetChain));
-        Wei result = assetConversion(targetChain, targetFees, chainId());
-        require(result.unwrap() <= type(uint128).max, "Overflow");
-        return result;
+    function quoteDeliveryOverhead(uint16 targetChain) public view returns (LocalNative nativePriceQuote) {
+        nativePriceQuote = quoteGasCost(targetChain, deliverGasOverhead(targetChain));
+        if(nativePriceQuote.unwrap() > type(uint128).max) {
+            revert Overflow(nativePriceQuote.unwrap(), type(uint128).max);
+        }
     }
 
-    //Returns the price of purchasing 1 unit of gas on the target chain, denominated in this chain's wei.
-    function quoteGasPrice(uint16 targetChain) public view returns (GasPrice) {
-        Wei gasPriceInSourceChainCurrency =
-            assetConversion(targetChain, gasPrice(targetChain).priceAsWei(), chainId());
-        require(gasPriceInSourceChainCurrency.unwrap() <= type(uint88).max, "Overflow");
-        return GasPrice.wrap(uint88(gasPriceInSourceChainCurrency.unwrap()));
+    //Returns the price of purchasing gasAmount units of gas on the target chain, denominated in this chain's wei.
+    function quoteGasCost(uint16 targetChain, Gas gasAmount) public view returns (LocalNative totalCost) {
+        Wei gasCostInSourceChainCurrency =
+            assetConversion(targetChain, gasAmount.toWei(gasPrice(targetChain)), chainId());
+        totalCost = LocalNative.wrap(gasCostInSourceChainCurrency.unwrap());
+    }
+
+    function quoteGasPrice(uint16 targetChain) public view returns (GasPrice price) {
+        price = GasPrice.wrap(quoteGasCost(targetChain, Gas.wrap(1)).unwrap());
+        if(price.unwrap() > type(uint88).max) {
+            revert Overflow(price.unwrap(), type(uint88).max);
+        }
     }
 
     // relevant for chains that have dynamic execution pricing (e.g. Ethereum)
@@ -146,6 +149,12 @@ contract DeliveryProvider is DeliveryProviderGovernance, IDeliveryProvider {
         Wei sourceAmount,
         uint16 targetChain
     ) internal view returns (Wei targetAmount) {
+        if(nativeCurrencyPrice(sourceChain).unwrap() == 0) {
+            revert PriceIsZero(sourceChain);
+        } 
+        if(nativeCurrencyPrice(targetChain).unwrap() == 0) {
+            revert PriceIsZero(targetChain);
+        }
         return sourceAmount.convertAsset(
             nativeCurrencyPrice(sourceChain),
             nativeCurrencyPrice(targetChain),
@@ -159,15 +168,21 @@ contract DeliveryProvider is DeliveryProviderGovernance, IDeliveryProvider {
     function quoteAssetCost(
         uint16 targetChain,
         TargetNative targetChainAmount
-    ) internal view returns (Wei currentChainAmount) {
+    ) internal view returns (LocalNative currentChainAmount) {
         (uint16 buffer, uint16 bufferDenominator) = assetConversionBuffer(targetChain);
+        if(nativeCurrencyPrice(chainId()).unwrap() == 0) {
+            revert PriceIsZero(chainId());
+        } 
+        if(nativeCurrencyPrice(targetChain).unwrap() == 0) {
+            revert PriceIsZero(targetChain);
+        }
         return targetChainAmount.asNative().convertAsset(
-            nativeCurrencyPrice(chainId()),
             nativeCurrencyPrice(targetChain),
+            nativeCurrencyPrice(chainId()),
             (uint32(buffer) + bufferDenominator),
-            (buffer),
+            (bufferDenominator),
             // round up
             true
-        );
+        ).asLocalNative();
     }
 }

@@ -28,6 +28,8 @@ contract DeliveryProviderStorage {
         address owner;
         // Pending target of ownership transfer.
         address pendingOwner;
+        // Address that is allowed to modify pricing
+        address pricingWallet;
         // Address of the core relayer contract.
         address coreRelayer;
         // Dictionary of implementation contract -> initialized flag
@@ -41,7 +43,7 @@ contract DeliveryProviderStorage {
         // The delivery overhead gas required to deliver a message to targetChain, denominated in targetChain's gas.
         mapping(uint16 => Gas) deliverGasOverhead;
         // The maximum budget that is allowed for a delivery on target chain, denominated in the targetChain's wei.
-        mapping(uint16 => Wei) maximumBudget;
+        mapping(uint16 => TargetNative) maximumBudget;
         // Dictionary of wormhole chain id -> assetConversion
         mapping(uint16 => AssetConversion) assetConversion;
         // Reward address for the relayer. The WormholeRelayer contract transfers the reward for relaying messages here.

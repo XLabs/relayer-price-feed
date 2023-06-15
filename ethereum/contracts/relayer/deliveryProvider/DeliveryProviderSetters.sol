@@ -28,6 +28,10 @@ contract DeliveryProviderSetters is Context, DeliveryProviderState {
         _state.chainId = thisChain;
     }
 
+    function setPricingWallet(address newPricingWallet) internal {
+        _state.pricingWallet = newPricingWallet;
+    }
+
     function setWormholeRelayer(address payable coreRelayer) internal {
         _state.coreRelayer = coreRelayer;
     }
@@ -51,7 +55,7 @@ contract DeliveryProviderSetters is Context, DeliveryProviderState {
 
     function setMaximumBudget(uint16 targetChain, Wei amount) internal {
         require(amount.unwrap() <= type(uint192).max, "amount too large");
-        _state.maximumBudget[targetChain] = amount;
+        _state.maximumBudget[targetChain] = amount.asTargetNative();
     }
 
     function setPriceInfo(

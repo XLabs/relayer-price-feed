@@ -10,8 +10,6 @@ import {DeliveryProviderImplementation} from
     "../../contracts/relayer/deliveryProvider/DeliveryProviderImplementation.sol";
 import {DeliveryProviderProxy} from
     "../../contracts/relayer/deliveryProvider/DeliveryProviderProxy.sol";
-import {DeliveryProviderMessages} from
-    "../../contracts/relayer/deliveryProvider/DeliveryProviderMessages.sol";
 import {DeliveryProviderStructs} from
     "../../contracts/relayer/deliveryProvider/DeliveryProviderStructs.sol";
 import "../../contracts/interfaces/relayer/IWormholeRelayerTyped.sol";
@@ -50,7 +48,7 @@ contract WormholeRelayerGovernanceTests is Test {
     function setUp() public {
         helpers = new TestHelpers();
         (wormhole, wormholeSimulator) = helpers.setUpWormhole(1);
-        deliveryProvider = helpers.setUpDeliveryProvider(1, address(wormhole));
+        deliveryProvider = helpers.setUpDeliveryProvider(1);
         wormholeRelayer = helpers.setUpWormholeRelayer(wormhole, address(deliveryProvider));
     }
 
@@ -99,8 +97,8 @@ contract WormholeRelayerGovernanceTests is Test {
     }
 
     function testSetDefaultDeliveryProvider() public {
-        IDeliveryProvider deliveryProviderB = helpers.setUpDeliveryProvider(1, address(wormhole));
-        IDeliveryProvider deliveryProviderC = helpers.setUpDeliveryProvider(1, address(wormhole));
+        IDeliveryProvider deliveryProviderB = helpers.setUpDeliveryProvider(1);
+        IDeliveryProvider deliveryProviderC = helpers.setUpDeliveryProvider(1);
 
         bytes memory signed = signMessage(
             abi.encodePacked(
@@ -165,18 +163,13 @@ contract WormholeRelayerGovernanceTests is Test {
             ) == toWormholeFormat(address(wormholeRelayer3))
         );
 
+        vm.expectRevert(abi.encodeWithSignature("ChainAlreadyRegistered(uint16,bytes32)", 3, toWormholeFormat(address(wormholeRelayer3))));
         helpers.registerWormholeRelayerContract(
             WormholeRelayer(payable(address(wormholeRelayer1))),
             wormhole,
             1,
             3,
             toWormholeFormat(address(wormholeRelayer2))
-        );
-
-        assertTrue(
-            WormholeRelayer(payable(address(wormholeRelayer1))).getRegisteredWormholeRelayerContract(
-                3
-            ) == toWormholeFormat(address(wormholeRelayer2))
         );
     }
 
@@ -189,7 +182,7 @@ contract WormholeRelayerGovernanceTests is Test {
                 relayerModule,
                 uint8(2),
                 uint16(1),
-                toWormholeFormat(address(new DeliveryProviderImplementation(address(wormhole))))
+                toWormholeFormat(address(new DeliveryProviderImplementation()))
             )
         );
 
