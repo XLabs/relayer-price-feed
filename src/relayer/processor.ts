@@ -84,7 +84,7 @@ async function processDelivery(
     executionRecord.specifiedDeliveryProvider = sourceDeliveryProvider;
     return;
   }
-  processDeliveryInstruction(ctx, deliveryVaa, ctx.vaaBytes!, executionRecord);
+  await processDeliveryInstruction(ctx, deliveryVaa, ctx.vaaBytes!, executionRecord);
 }
 
 async function processRedelivery(
