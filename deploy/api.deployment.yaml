@@ -1,0 +1,38 @@
+# kubetpl:syntax:$
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generic-relayer-api
+  namespace: xlabs-generic-relayer
+  labels:
+    app: generic-relayer-api
+spec:
+  selector:
+    matchLabels:
+      app: generic-relayer-api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: generic-relayer-api
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: api
+          image: $AWS_ACCOUNT.dkr.ecr.us-east-2.amazonaws.com/generic-relayer:$TAG
+          imagePullPolicy: Always
+          command: ["npx", "ts-node", "/home/node/app/src/api.ts"]
+          resources:
+            requests:
+              memory: 600Mi
+            limits:
+              cpu: 1000m
+              memory: 2000Mi
+          envFrom:
+            - secretRef:
+                name: generic-relayer-db
+                optional: false
+            - configMapRef:
+                name: generic-relayer-api-env
+                optional: false

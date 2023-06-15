@@ -4,7 +4,14 @@ import { relayStoreConfiguration } from './shared/storage-config';
 
 import { getLogger } from './shared/logger';
 
-const logger = getLogger();
+const relayerStatusApiConfiguration = {
+  port: process.env.API_PORT ? +process.env.API_PORT :  4200,
+  prefix: '/relay-status',
+};
+
+const logLevel = process.env.LOG_LEVEL;
+
+const logger = getLogger(logLevel);
 
 (async function main() {
   const storeConfig: StorageConfiguration = {
@@ -13,8 +20,7 @@ const logger = getLogger();
   }
 
   const apiConfig: ApiConfiguration = {
-    port: 4200,
-    prefix: '/relay-status',
+    ...relayerStatusApiConfiguration,
     logger: logger.child({ module: 'api' }),
   };
 

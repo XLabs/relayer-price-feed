@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: generic-relayer-api-env
+  namespace: xlabs-generic-relayer
+data:
+  NODE_ENV: "staging"
+  API_PORT: "8080"
+  LOG_LEVEL: "debug"
