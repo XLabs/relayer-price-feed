@@ -10,7 +10,6 @@ RUN npm i typechain -g
 RUN curl -L https://foundry.paradigm.xyz | bash
 RUN $HOME/.foundry/bin/foundryup
 
-# Run as user, otherwise, npx explodes.
 RUN mv /root/.foundry/bin/forge /bin/forge
 
 WORKDIR /home/node/app
