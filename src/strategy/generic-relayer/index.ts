@@ -144,9 +144,6 @@ export class GenericRelayerStrategy implements UpdateStrategy {
         continue;
       }
 
-      console.log("current RPC");
-      console.log(rpc);
-
       const ethersProvider = new ethers.providers.JsonRpcProvider(rpc);
       const deliveryProvider = DeliveryProvider__factory.connect(
         contractAddress,
