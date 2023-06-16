@@ -1,5 +1,5 @@
 {
-  "name": "relayer-price-feed",
+  "name": "@xlabs-xyz/relayer-price-feed",
   "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
