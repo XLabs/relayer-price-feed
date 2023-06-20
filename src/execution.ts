@@ -1,5 +1,4 @@
 import { ethers } from "ethers";
-import { SupportedChainId } from "./config";
 import { Logger } from "winston";
 import { ContractUpdate, UpdateStrategy } from "./strategy";
 import { GlobalConfig } from "./environment";

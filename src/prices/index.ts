@@ -4,6 +4,12 @@ import { BigNumber } from "ethers";
 export * from "./coinGeckoFetcher";
 export * from "./fixedPriceFetcher";
 
+export type TokenInfo = {
+  chainId: ChainId;
+  address: string;
+  symbol: string;
+};
+
 export type PricingData = {
   isValid: boolean;
   nativeTokens: Map<ChainId, BigNumber>;
