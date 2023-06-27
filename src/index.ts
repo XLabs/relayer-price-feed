@@ -10,3 +10,4 @@ export * from "./prices";
 export * from "./strategy";
 export * from "./environment";
 export * from "./execution";
+export * from "./prometheus";

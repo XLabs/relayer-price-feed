@@ -34,6 +34,7 @@ export async function executeContractUpdates(
       logger.info("Pulling signer for chainId: " + contractUpdate.chainId);
       const signer = getWallet(contractUpdate.chainId, globalConfig);
       logger.info("Sending transaction for chainId: " + contractUpdate.chainId);
+      strategy.updatePriceUpdateAttempt(contractUpdate.chainId.toString());
       const tx = await strategy.pushUpdate(signer, contractUpdate);
       logger.info(
         "Transaction sent for chainId: " +
@@ -50,6 +51,7 @@ export async function executeContractUpdates(
           " error: " +
           e
       );
+      strategy.updatePriceUpdateFailure(contractUpdate.chainId.toString());
     }
   }
 }
@@ -68,6 +70,7 @@ export async function executePriceFetching(
       try {
         await priceFetcher.updatePricingData();
       } catch (e) {
+        priceFetcher.updateFailureCounter();
         logger.error("Price fetcher process failed with error: " + e);
       }
     }
