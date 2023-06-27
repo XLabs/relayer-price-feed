@@ -1,4 +1,3 @@
-import { ChainId } from "@certusone/wormhole-sdk";
 import {
   UpdateStrategy,
   GlobalConfig,
@@ -8,59 +7,101 @@ import {
   executeStrategies,
   GenericRelayerStrategy,
   GenericRelayerStrategyConfig,
-  loadPrivateKeys,
   loadGlobalConfig,
+  PrometheusExporter,
 } from "../src";
-import { Logger, createLogger, format, transports } from "winston";
-import { BigNumber } from "ethers";
-import { fromB64 } from "@mysten/sui.js";
+import { createLogger, format, transports } from "winston";
+import Koa from "koa";
+import Router from "koa-router";
 
 //Start! Set up the global configuration object
 
 //In testing, we load private keys into the environment via dotenv.
 //If this differs in your environment, you can just remove this.
 import * as dotenv from "dotenv";
-dotenv.config({ path: "./example/.env.tilt"});
+(async () => {
+  dotenv.config({ path: "./example/.env.tilt" });
 
-//const globalConfig : GlobalConfig = process.env.ENV === "tilt" ? require("./config/tilt.json") : {};
+  //const globalConfig : GlobalConfig = process.env.ENV === "tilt" ? require("./config/tilt.json") : {};
 
-const tiltConfig: GlobalConfig = loadGlobalConfig("./example/config/globalConfig.json");
-const logger = createLogger({
-  transports: [new transports.Console()],
-  format: format.combine(
-    format.colorize(),
-    format.timestamp(),
-    format.printf(({ timestamp, level, message }) => {
-      return `[${timestamp}] ${level}: ${message}`;
-    })
-  ),
-});
+  const tiltConfig: GlobalConfig = loadGlobalConfig(
+    "./example/config/globalConfig.json"
+  );
+  const logger = createLogger({
+    transports: [new transports.Console()],
+    format: format.combine(
+      format.colorize(),
+      format.timestamp(),
+      format.printf(({ timestamp, level, message }) => {
+        return `[${timestamp}] ${level}: ${message}`;
+      })
+    ),
+  });
 
-const globalConfig: GlobalConfig = tiltConfig;
+  // Metrics
+  const metricsExporter = new PrometheusExporter();
 
-//Next up, configure the price fetching process and run it!
-const fixedPriceFetcherConfig: FixedPriceFetcherConfig = FixedPriceFetcher.loadConfig("./example/config/fixedPriceFetcherConfig.json");
-const priceFetchingProcess = new FixedPriceFetcher(
-  fixedPriceFetcherConfig,
-  globalConfig,
-  logger
-);
-executePriceFetching(priceFetchingProcess, logger);
+  const globalConfig: GlobalConfig = tiltConfig;
 
-//Finally, configure all the strategies and then run them!
-const genericRelayerStrategyConfig: GenericRelayerStrategyConfig = GenericRelayerStrategy.loadConfig("./example/config/genericRelayerStrategyConfig.json");
-const genericRelayerStrategy = new GenericRelayerStrategy(
-  genericRelayerStrategyConfig,
-  globalConfig,
-  logger
-);
+  //Next up, configure the price fetching process and run it!
+  const fixedPriceFetcherConfig: FixedPriceFetcherConfig =
+    FixedPriceFetcher.loadConfig(
+      "./example/config/fixedPriceFetcherConfig.json"
+    );
+  const priceFetchingProcess = new FixedPriceFetcher(
+    fixedPriceFetcherConfig,
+    globalConfig,
+    logger,
+    metricsExporter
+  );
+  executePriceFetching(priceFetchingProcess, logger);
 
-const allStrategies: UpdateStrategy[] = [];
-allStrategies.push(genericRelayerStrategy);
+  //Finally, configure all the strategies and then run them!
+  const genericRelayerStrategyConfig: GenericRelayerStrategyConfig =
+    GenericRelayerStrategy.loadConfig(
+      "./example/config/genericRelayerStrategyConfig.json"
+    );
+  const genericRelayerStrategy = new GenericRelayerStrategy(
+    genericRelayerStrategyConfig,
+    globalConfig,
+    logger,
+    metricsExporter
+  );
 
-executeStrategies(
-  allStrategies,
-  globalConfig,
-  priceFetchingProcess.getPricingData(),
-  logger
-);
+  const allStrategies: UpdateStrategy[] = [];
+  allStrategies.push(genericRelayerStrategy);
+
+  executeStrategies(
+    allStrategies,
+    globalConfig,
+    priceFetchingProcess.getPricingData(),
+    logger
+  );
+
+  function startMetricsServer(
+    port: number,
+    path: string,
+    getMetrics: () => Promise<string>
+  ): Promise<Koa> {
+    const app = new Koa();
+    const router = new Router();
+
+    router.get(path, async (ctx: Koa.Context) => {
+      ctx.body = await getMetrics();
+    });
+
+    app.use(router.routes());
+    app.use(router.allowedMethods());
+
+    return new Promise((resolve) => {
+      app.listen(port, () => {
+        resolve(app);
+      });
+    });
+  }
+
+  const app = await startMetricsServer(3000, "/metrics", async () => {
+    const metrics = await priceFetchingProcess.getMetrics();
+    return metrics;
+  });
+})();
