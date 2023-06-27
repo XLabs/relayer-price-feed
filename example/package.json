@@ -7,10 +7,16 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "koa": "^2.14.2",
+    "koa-router": "^12.0.0",
     "relayer-price-feed": "file:../",
     "winston": "^3.9.0"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/koa": "^2.13.6",
+    "@types/koa-router": "^7.4.4"
+  }
 }

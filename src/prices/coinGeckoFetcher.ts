@@ -4,6 +4,7 @@ import { TokenInfo } from "./";
 import { ethers } from "ethers";
 import { ChainId } from "@certusone/wormhole-sdk";
 import { PriceFetcher, PricingData } from ".";
+import { PrometheusExporter } from "../prometheus";
 
 export type PriceFetchingConfig = {};
 
@@ -37,8 +38,13 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
   priceCache: any; // @TODO: Add price cache
   pricePrecision: number = 6; // Discuss with chase
   defaultGasPrice = ethers.utils.parseUnits("30", "gwei");
+  exporter?: PrometheusExporter;
 
-  constructor(logger: Logger, config: CoingeckoProviderOptions) {
+  constructor(
+    logger: Logger,
+    config: CoingeckoProviderOptions,
+    metricsExporter?: PrometheusExporter
+  ) {
     this.logger = logger;
     this.config = config;
     this.tokens = config.tokens;
@@ -47,6 +53,7 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
     );
 
     this.rpcs = config.rpcs;
+    this.exporter = metricsExporter;
   }
 
   runFrequencyMs(): number {
@@ -85,6 +92,14 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       this.pricingData.nativeTokens
     );
     this.logger.info("Pricing Data gasPrice:", this.pricingData.gasPrices);
+  }
+
+  public updateFailureCounter(): void {
+    this.exporter?.updatePriceProviderFailure("coingecko_provider");
+  }
+
+  public async getMetrics(): Promise<string> {
+    return this.exporter?.metrics() ?? "";
   }
 
   private formatPriceUpdates(prices: any): Map<ChainId, ethers.BigNumber> {

@@ -7,6 +7,7 @@ import { ChainId } from "@certusone/wormhole-sdk";
 import { DeliveryProviderStructs } from "./tmp/DeliveryProvider";
 import { DeliveryProvider__factory } from "./tmp/DeliveryProvider__factory";
 import * as fs from "fs";
+import { PrometheusExporter } from "../../prometheus";
 
 //This configuration will become much more complex over time,
 //The first logical addition would be to allow different configurations on different corridors.
@@ -36,19 +37,22 @@ export class GenericRelayerStrategy implements UpdateStrategy {
   logger: Logger;
   globalConfig: GlobalConfig;
   config: GenericRelayerStrategyConfig;
+  exporter?: PrometheusExporter;
 
   constructor(
     config: GenericRelayerStrategyConfig,
     globalConfig: GlobalConfig,
-    logger: Logger
+    logger: Logger,
+    metricsExporter?: PrometheusExporter
   ) {
     this.config = config;
     this.globalConfig = globalConfig;
     this.logger = logger;
+    this.exporter = metricsExporter;
   }
 
-  public static loadConfig(path : string) : GenericRelayerStrategyConfig {
-    const file = fs.readFileSync(path, 'utf-8');
+  public static loadConfig(path: string): GenericRelayerStrategyConfig {
+    const file = fs.readFileSync(path, "utf-8");
     const config = JSON.parse(file);
 
     const contractAddresses = new Map<ChainId, string>();
@@ -62,7 +66,13 @@ export class GenericRelayerStrategy implements UpdateStrategy {
     const maxDecrease = config.maxDecrease;
     const overrideSafeGuard = !!config.overrideSafeGuard;
 
-    if(!gasPriceTolerance || !nativePriceTolerance || !gasPriceMarkup || !maxIncrease || !maxDecrease ) {
+    if (
+      !gasPriceTolerance ||
+      !nativePriceTolerance ||
+      !gasPriceMarkup ||
+      !maxIncrease ||
+      !maxDecrease
+    ) {
       throw new Error("Invalid config file supplied to GenericRelayerStrategy");
     }
 
@@ -73,9 +83,9 @@ export class GenericRelayerStrategy implements UpdateStrategy {
       gasPriceMarkup,
       maxIncrease,
       maxDecrease,
-      overrideSafeGuard
-    }
-  } 
+      overrideSafeGuard,
+    };
+  }
 
   public runFrequencyMs(): number {
     return 1000;
@@ -239,29 +249,43 @@ export class GenericRelayerStrategy implements UpdateStrategy {
         this.config.gasPriceTolerance
       );
 
-      if(!this.config.overrideSafeGuard){
+      if (!this.config.overrideSafeGuard) {
         const newMaxNativePrice = this.ethersMul(
           priceInfo.priceData.nativePrice,
-          this.config.maxIncrease + 1);
+          this.config.maxIncrease + 1
+        );
         const newMinNativePrice = this.ethersMul(
           priceInfo.priceData.nativePrice,
-          1 - this.config.maxDecrease);
-        if(newNativePrice.gt(newMaxNativePrice) || newNativePrice.lt(newMinNativePrice)){
+          1 - this.config.maxDecrease
+        );
+        if (
+          newNativePrice.gt(newMaxNativePrice) ||
+          newNativePrice.lt(newMinNativePrice)
+        ) {
           this.logger.error(
-            `New native price ${newNativePrice.toString()} is outside of bounds for chainId ${priceInfo.chainId}`
+            `New native price ${newNativePrice.toString()} is outside of bounds for chainId ${
+              priceInfo.chainId
+            }`
           );
           continue;
         }
 
         const newMaxGasPrice = this.ethersMul(
           priceInfo.priceData.gasPrice,
-          this.config.maxIncrease + 1);
+          this.config.maxIncrease + 1
+        );
         const newMinGasPrice = this.ethersMul(
           priceInfo.priceData.gasPrice,
-          1 - this.config.maxDecrease);
-        if(markedUpGasPrice.gt(newMaxGasPrice) || markedUpGasPrice.lt(newMinGasPrice)){ 
+          1 - this.config.maxDecrease
+        );
+        if (
+          markedUpGasPrice.gt(newMaxGasPrice) ||
+          markedUpGasPrice.lt(newMinGasPrice)
+        ) {
           this.logger.error(
-            `New gas price ${markedUpGasPrice.toString()} is outside of bounds for chainId ${priceInfo.chainId}`
+            `New gas price ${markedUpGasPrice.toString()} is outside of bounds for chainId ${
+              priceInfo.chainId
+            }`
           );
           continue;
         }
@@ -351,6 +375,24 @@ export class GenericRelayerStrategy implements UpdateStrategy {
 
     const output = await contract.updatePrices(transactionUpdateArray);
     return output;
+  }
+
+  public updatePriceUpdateAttempt(chainId: string): void {
+    this.exporter?.updatePriceUpdateAttempts(
+      chainId,
+      "generic_relayer_stretegy"
+    );
+  }
+
+  public updatePriceUpdateFailure(chainId: string): void {
+    this.exporter?.updatePriceUpdateFailure(
+      chainId,
+      "generic_relayer_stretegy"
+    );
+  }
+
+  public async getMetrics(): Promise<string> {
+    return this.exporter?.metrics() ?? "";
   }
 
   //Utility function to get around big number issues
