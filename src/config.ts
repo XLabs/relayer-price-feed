@@ -9,7 +9,6 @@ import {
 } from "@certusone/wormhole-sdk";
 import { ethers } from "ethers";
 import { UpdateStrategy } from "./strategy";
-import { TokenInfo } from "./feeder";
 import { PriceFetcher } from "./prices";
 
 export const SUPPORTED_CHAIN_IDS = [

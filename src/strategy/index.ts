@@ -1,9 +1,7 @@
 import { ethers } from "ethers";
-import { SupportedChainId } from "../config";
 import { PricingData } from "../prices";
 import { ChainId } from "@certusone/wormhole-sdk";
 export * from "./generic-relayer";
-//TODO export * from "./simple-strategy";
 
 export type ContractUpdate = {
   chainId: ChainId;

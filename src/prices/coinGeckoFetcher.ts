@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Logger } from "winston";
-import { TokenInfo } from "../feeder";
+import { TokenInfo } from "./";
 import { ethers } from "ethers";
 import { ChainId } from "@certusone/wormhole-sdk";
 import { PriceFetcher, PricingData } from ".";
