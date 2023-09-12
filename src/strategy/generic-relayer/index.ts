@@ -1,9 +1,9 @@
 import { BigNumber, ethers } from "ethers";
-import { ContractUpdate, UpdateStrategy } from "../index";
+import { ContractUpdate, UpdateStatus, UpdateStrategy } from "../index";
 import { Logger } from "winston";
 import { GlobalConfig } from "../../environment";
 import { PricingData } from "../../prices";
-import { ChainId } from "@certusone/wormhole-sdk";
+import { ChainId, coalesceChainName } from "@certusone/wormhole-sdk";
 import { DeliveryProviderStructs } from "./tmp/DeliveryProvider";
 import { DeliveryProvider__factory } from "./tmp/DeliveryProvider__factory";
 import * as fs from "fs";
@@ -186,6 +186,16 @@ export class GenericRelayerStrategy implements UpdateStrategy {
           contractStates.set(chainId, priceInfos);
         }
         priceInfos.push(priceInfo);
+        this.reportContractPrice(
+          coalesceChainName(deliveryChainId),
+          nativePrice.toNumber(),
+          { isGasPrice: false }
+        );
+        this.reportContractPrice(
+          coalesceChainName(deliveryChainId),
+          gasPrice.toNumber(),
+          { isGasPrice: true }
+        );
       }
     }
 
@@ -377,17 +387,26 @@ export class GenericRelayerStrategy implements UpdateStrategy {
     return output;
   }
 
-  public updatePriceUpdateAttempt(chainId: string): void {
-    this.exporter?.updatePriceUpdateAttempts(
-      chainId,
-      "generic_relayer_stretegy"
-    );
+  public reportPriceUpdate(
+    chainName: string,
+    params: { status: UpdateStatus }
+  ) {
+    this.exporter?.reportPriceUpdate(chainName, params.status);
   }
 
-  public updatePriceUpdateFailure(chainId: string): void {
-    this.exporter?.updatePriceUpdateFailure(
-      chainId,
-      "generic_relayer_stretegy"
+  public async reportPriceUpdateGas(chainName: string, gas: number) {
+    this.exporter?.reportPriceUpdateGas(chainName, gas);
+  }
+
+  public reportContractPrice(
+    chainName: string,
+    price: number,
+    params: { isGasPrice: boolean }
+  ) {
+    this.exporter?.reportContractPrice(
+      chainName,
+      params.isGasPrice ? "true" : "false",
+      price
     );
   }
 

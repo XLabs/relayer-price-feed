@@ -3,7 +3,7 @@ import { Logger } from "winston";
 import { ContractUpdate, UpdateStrategy } from "./strategy";
 import { GlobalConfig } from "./environment";
 import { PriceFetcher, PricingData } from "./prices";
-import { ChainId } from "@certusone/wormhole-sdk";
+import { ChainId, coalesceChainName } from "@certusone/wormhole-sdk";
 
 function getWallet(
   chainId: ChainId,
@@ -34,7 +34,6 @@ export async function executeContractUpdates(
       logger.info("Pulling signer for chainId: " + contractUpdate.chainId);
       const signer = getWallet(contractUpdate.chainId, globalConfig);
       logger.info("Sending transaction for chainId: " + contractUpdate.chainId);
-      strategy.updatePriceUpdateAttempt(contractUpdate.chainId.toString());
       const tx = await strategy.pushUpdate(signer, contractUpdate);
       logger.info(
         "Transaction sent for chainId: " +
@@ -44,6 +43,14 @@ export async function executeContractUpdates(
       );
       const receipt = await tx.wait();
       logger.info("Result of transaction is: " + receipt.status);
+      strategy.reportPriceUpdate(coalesceChainName(contractUpdate.chainId), {
+        status: "success",
+      });
+      await strategy.reportPriceUpdateGas(
+        coalesceChainName(contractUpdate.chainId),
+        receipt.gasUsed.toNumber()
+      );
+      reportContractPrices(strategy, updates);
     } catch (e) {
       logger.error(
         "Error executing price update for chainId: " +
@@ -51,7 +58,25 @@ export async function executeContractUpdates(
           " error: " +
           e
       );
-      strategy.updatePriceUpdateFailure(contractUpdate.chainId.toString());
+      strategy.reportPriceUpdate(coalesceChainName(contractUpdate.chainId), {
+        status: "failed",
+      });
+    }
+  }
+}
+
+function reportContractPrices(
+  strategy: UpdateStrategy,
+  updates: ContractUpdate[]
+) {
+  for (let update of updates) {
+    const updateData = update.updateData;
+    for (let key of Object.keys(updateData)) {
+      const isGasPrice = key === "gasPrice";
+      const price = updateData[key];
+      strategy.reportContractPrice(coalesceChainName(update.chainId), price, {
+        isGasPrice,
+      });
     }
   }
 }
@@ -69,8 +94,9 @@ export async function executePriceFetching(
       lastRun = now;
       try {
         await priceFetcher.updatePricingData();
+        priceFetcher.reportPricePolling({ status: "success" });
       } catch (e) {
-        priceFetcher.updateFailureCounter();
+        priceFetcher.reportPricePolling({ status: "failed" });
         logger.error("Price fetcher process failed with error: " + e);
       }
     }

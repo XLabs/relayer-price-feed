@@ -24,10 +24,13 @@ export function getDefaultPricingData(): PricingData {
   };
 }
 
+export type PollingStatus = "success" | "failed";
+
 export type PriceFetcher = {
   getPricingData(): PricingData;
   updatePricingData(): Promise<void>;
   runFrequencyMs(): number;
-  updateFailureCounter(): void;
+  reportPricePolling(params: { status: PollingStatus }): void;
+  reportProviderPrice(token: string, price: number): void;
   getMetrics(): Promise<string>;
 };
