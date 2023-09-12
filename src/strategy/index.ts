@@ -8,8 +8,6 @@ export type ContractUpdate = {
   updateData: any;
 };
 
-export type UpdateStatus = "success" | "failed";
-
 export interface UpdateStrategy {
   name: string;
   runFrequencyMs(): number;
@@ -18,12 +16,10 @@ export interface UpdateStrategy {
     signer: ethers.Signer,
     update: ContractUpdate
   ): Promise<ethers.providers.TransactionResponse>;
-  reportPriceUpdate(chainName: string, params: { status: UpdateStatus }): void;
+  reportPriceUpdateSuccess(chainName: string): void;
+  reportPriceUpdateFailure(chainName: string): void;
   reportPriceUpdateGas(chainName: string, gas: number): Promise<void>;
-  reportContractPrice(
-    chainName: string,
-    price: number,
-    params: { isGasPrice: boolean }
-  ): void;
+  reportContractNativePrice(chainName: string, price: number): void;
+  reportContractGasPrice(chainName: string, price: number): void;
   getMetrics(): Promise<string>;
 }

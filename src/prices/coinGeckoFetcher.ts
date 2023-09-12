@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Logger } from "winston";
-import { PollingStatus, TokenInfo } from "./";
+import { TokenInfo } from "./";
 import { ethers } from "ethers";
 import { ChainId, coalesceChainName } from "@certusone/wormhole-sdk";
 import { PriceFetcher, PricingData } from ".";
@@ -91,8 +91,16 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
     }
   }
 
-  public reportPricePolling(params: { status: PollingStatus }): void {
-    this.exporter?.reportPricePolling(params.status);
+  public reportPricePollingSuccess(): void {
+    this.exporter?.reportPricePolling("success");
+  }
+
+  public reportPricePollingFailure(): void {
+    this.exporter?.reportPricePolling("failed");
+  }
+
+  public reportProviderPrice(token: string, price: number): void {
+    this.exporter?.reportProviderPrice(token, price);
   }
 
   public async getMetrics(): Promise<string> {
@@ -135,9 +143,5 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       this.config.gasPrice?.get(chaindId) || this.defaultGasPrice;
 
     return gasPrice;
-  }
-
-  public reportProviderPrice(token: string, price: number): void {
-    this.exporter?.reportProviderPrice(token, price);
   }
 }

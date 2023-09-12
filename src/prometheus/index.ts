@@ -45,6 +45,10 @@ function registerContractPrices(registry: Registry) {
   });
 }
 
+export type PollingStatus = "success" | "failed";
+export type UpdateStatus = "success" | "failed";
+export type IsGasPrice = "true" | "false";
+
 export class PrometheusExporter {
   private pricePollingCounter: Counter;
   private priceUpdatesCounter: Counter;
@@ -68,11 +72,11 @@ export class PrometheusExporter {
     return this.registry.metrics();
   }
 
-  public reportPricePolling(status: string) {
+  public reportPricePolling(status: PollingStatus) {
     this.pricePollingCounter.inc({ status });
   }
 
-  public reportPriceUpdate(chainName: string, status: string) {
+  public reportPriceUpdate(chainName: string, status: UpdateStatus) {
     this.priceUpdatesCounter.inc({ chain_name: chainName, status });
   }
 
@@ -95,7 +99,7 @@ export class PrometheusExporter {
 
   public reportContractPrice(
     chainName: string,
-    isGasPrice: string,
+    isGasPrice: IsGasPrice,
     price: number
   ) {
     this.contractPrices.set(

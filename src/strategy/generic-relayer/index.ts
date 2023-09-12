@@ -1,5 +1,5 @@
 import { BigNumber, ethers } from "ethers";
-import { ContractUpdate, UpdateStatus, UpdateStrategy } from "../index";
+import { ContractUpdate, UpdateStrategy } from "../index";
 import { Logger } from "winston";
 import { GlobalConfig } from "../../environment";
 import { PricingData } from "../../prices";
@@ -186,15 +186,13 @@ export class GenericRelayerStrategy implements UpdateStrategy {
           contractStates.set(chainId, priceInfos);
         }
         priceInfos.push(priceInfo);
-        this.reportContractPrice(
+        this.reportContractNativePrice(
           coalesceChainName(deliveryChainId),
-          nativePrice.toNumber(),
-          { isGasPrice: false }
+          nativePrice.toNumber()
         );
-        this.reportContractPrice(
+        this.reportContractGasPrice(
           coalesceChainName(deliveryChainId),
-          gasPrice.toNumber(),
-          { isGasPrice: true }
+          gasPrice.toNumber()
         );
       }
     }
@@ -387,27 +385,24 @@ export class GenericRelayerStrategy implements UpdateStrategy {
     return output;
   }
 
-  public reportPriceUpdate(
-    chainName: string,
-    params: { status: UpdateStatus }
-  ) {
-    this.exporter?.reportPriceUpdate(chainName, params.status);
+  public reportPriceUpdateSuccess(chainName: string) {
+    this.exporter?.reportPriceUpdate(chainName, "success");
+  }
+
+  public reportPriceUpdateFailure(chainName: string) {
+    this.exporter?.reportPriceUpdate(chainName, "failed");
   }
 
   public async reportPriceUpdateGas(chainName: string, gas: number) {
     this.exporter?.reportPriceUpdateGas(chainName, gas);
   }
 
-  public reportContractPrice(
-    chainName: string,
-    price: number,
-    params: { isGasPrice: boolean }
-  ) {
-    this.exporter?.reportContractPrice(
-      chainName,
-      params.isGasPrice ? "true" : "false",
-      price
-    );
+  public reportContractNativePrice(chainName: string, price: number): void {
+    this.exporter?.reportContractPrice(chainName, "false", price);
+  }
+
+  public reportContractGasPrice(chainName: string, price: number): void {
+    this.exporter?.reportContractPrice(chainName, "true", price);
   }
 
   public async getMetrics(): Promise<string> {

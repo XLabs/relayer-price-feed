@@ -1,10 +1,5 @@
 import { Logger } from "winston";
-import {
-  PollingStatus,
-  PriceFetcher,
-  PricingData,
-  getDefaultPricingData,
-} from ".";
+import { PriceFetcher, PricingData, getDefaultPricingData } from ".";
 import { GlobalConfig } from "../environment";
 import { ChainId } from "@certusone/wormhole-sdk";
 import { BigNumber } from "ethers";
@@ -89,8 +84,12 @@ export class FixedPriceFetcher implements PriceFetcher {
     return this.config.runFrequencyMs;
   }
 
-  public reportPricePolling(params: { status: PollingStatus }): void {
-    this.exporter?.reportPricePolling(params.status);
+  public reportPricePollingSuccess(): void {
+    this.exporter?.reportPricePolling("success");
+  }
+
+  public reportPricePollingFailure(): void {
+    this.exporter?.reportPricePolling("failed");
   }
 
   public reportProviderPrice(token: string, price: number): void {

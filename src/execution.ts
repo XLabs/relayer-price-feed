@@ -43,9 +43,9 @@ export async function executeContractUpdates(
       );
       const receipt = await tx.wait();
       logger.info("Result of transaction is: " + receipt.status);
-      strategy.reportPriceUpdate(coalesceChainName(contractUpdate.chainId), {
-        status: "success",
-      });
+      strategy.reportPriceUpdateSuccess(
+        coalesceChainName(contractUpdate.chainId)
+      );
       await strategy.reportPriceUpdateGas(
         coalesceChainName(contractUpdate.chainId),
         receipt.gasUsed.toNumber()
@@ -58,9 +58,9 @@ export async function executeContractUpdates(
           " error: " +
           e
       );
-      strategy.reportPriceUpdate(coalesceChainName(contractUpdate.chainId), {
-        status: "failed",
-      });
+      strategy.reportPriceUpdateFailure(
+        coalesceChainName(contractUpdate.chainId)
+      );
     }
   }
 }
@@ -74,9 +74,17 @@ function reportContractPrices(
     for (let key of Object.keys(updateData)) {
       const isGasPrice = key === "gasPrice";
       const price = updateData[key];
-      strategy.reportContractPrice(coalesceChainName(update.chainId), price, {
-        isGasPrice,
-      });
+      if (isGasPrice) {
+        strategy.reportContractGasPrice(
+          coalesceChainName(update.chainId),
+          price
+        );
+      } else {
+        strategy.reportContractNativePrice(
+          coalesceChainName(update.chainId),
+          price
+        );
+      }
     }
   }
 }
@@ -94,9 +102,9 @@ export async function executePriceFetching(
       lastRun = now;
       try {
         await priceFetcher.updatePricingData();
-        priceFetcher.reportPricePolling({ status: "success" });
+        priceFetcher.reportPricePollingSuccess();
       } catch (e) {
-        priceFetcher.reportPricePolling({ status: "failed" });
+        priceFetcher.reportPricePollingFailure();
         logger.error("Price fetcher process failed with error: " + e);
       }
     }
