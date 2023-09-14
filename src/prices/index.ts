@@ -28,6 +28,8 @@ export type PriceFetcher = {
   getPricingData(): PricingData;
   updatePricingData(): Promise<void>;
   runFrequencyMs(): number;
-  updateFailureCounter(): void;
+  reportPricePollingSuccess(): void;
+  reportPricePollingFailure(): void;
+  reportProviderPrice(token: string, price: number): void;
   getMetrics(): Promise<string>;
 };

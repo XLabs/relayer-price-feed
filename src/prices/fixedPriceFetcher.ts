@@ -69,6 +69,11 @@ export class FixedPriceFetcher implements PriceFetcher {
     this.data.isValid = true;
     this.data.nativeTokens = this.config.nativeTokens;
     this.data.gasPrices = this.config.gasPrices;
+
+    for (const priceData of this.data.nativeTokens) {
+      const [chainId, price] = priceData;
+      this.reportProviderPrice(chainId.toString(), price.toNumber());
+    }
   }
 
   public getPricingData(): PricingData {
@@ -79,8 +84,16 @@ export class FixedPriceFetcher implements PriceFetcher {
     return this.config.runFrequencyMs;
   }
 
-  public updateFailureCounter(): void {
-    this.exporter?.updatePriceProviderFailure("fixed_price_fetcher");
+  public reportPricePollingSuccess(): void {
+    this.exporter?.reportPricePolling("success");
+  }
+
+  public reportPricePollingFailure(): void {
+    this.exporter?.reportPricePolling("failed");
+  }
+
+  public reportProviderPrice(token: string, price: number): void {
+    this.exporter?.reportProviderPrice(token, price);
   }
 
   public async getMetrics(): Promise<string> {

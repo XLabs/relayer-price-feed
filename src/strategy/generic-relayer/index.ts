@@ -3,7 +3,7 @@ import { ContractUpdate, UpdateStrategy } from "../index";
 import { Logger } from "winston";
 import { GlobalConfig } from "../../environment";
 import { PricingData } from "../../prices";
-import { ChainId } from "@certusone/wormhole-sdk";
+import { ChainId, coalesceChainName } from "@certusone/wormhole-sdk";
 import { DeliveryProviderStructs } from "./tmp/DeliveryProvider";
 import { DeliveryProvider__factory } from "./tmp/DeliveryProvider__factory";
 import * as fs from "fs";
@@ -186,6 +186,14 @@ export class GenericRelayerStrategy implements UpdateStrategy {
           contractStates.set(chainId, priceInfos);
         }
         priceInfos.push(priceInfo);
+        this.reportContractNativePrice(
+          coalesceChainName(deliveryChainId),
+          nativePrice.toNumber()
+        );
+        this.reportContractGasPrice(
+          coalesceChainName(deliveryChainId),
+          gasPrice.toNumber()
+        );
       }
     }
 
@@ -377,18 +385,24 @@ export class GenericRelayerStrategy implements UpdateStrategy {
     return output;
   }
 
-  public updatePriceUpdateAttempt(chainId: string): void {
-    this.exporter?.updatePriceUpdateAttempts(
-      chainId,
-      "generic_relayer_stretegy"
-    );
+  public reportPriceUpdateSuccess(chainName: string) {
+    this.exporter?.reportPriceUpdate(chainName, "success");
   }
 
-  public updatePriceUpdateFailure(chainId: string): void {
-    this.exporter?.updatePriceUpdateFailure(
-      chainId,
-      "generic_relayer_stretegy"
-    );
+  public reportPriceUpdateFailure(chainName: string) {
+    this.exporter?.reportPriceUpdate(chainName, "failed");
+  }
+
+  public async reportPriceUpdateGas(chainName: string, gas: number) {
+    this.exporter?.reportPriceUpdateGas(chainName, gas);
+  }
+
+  public reportContractNativePrice(chainName: string, price: number): void {
+    this.exporter?.reportContractPrice(chainName, "false", price);
+  }
+
+  public reportContractGasPrice(chainName: string, price: number): void {
+    this.exporter?.reportContractPrice(chainName, "true", price);
   }
 
   public async getMetrics(): Promise<string> {

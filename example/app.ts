@@ -1,4 +1,4 @@
-import { ChainId } from "@certusone/wormhole-sdk";
+import { ChainId, coalesceChainName } from "@certusone/wormhole-sdk";
 import {
   UpdateStrategy,
   GlobalConfig,
@@ -21,20 +21,20 @@ import { ethers } from "ethers";
 const rpcs = new Map<ChainId, string>([
   [2, "https://endpoints.omniatech.io/v1/eth/goerli/public"],
   [4, "https://bsc-testnet.publicnode.com"],
-  [5, "https://avalanche-fuji-c-chain.publicnode.com"],
+  [6, "https://avalanche-fuji-c-chain.publicnode.com"],
 ]);
 
 const privateKeys = new Map<ChainId, string>([
   //These are the owner keys of the contracts in tilt
   [2, "0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"],
   [4, "0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"],
-  [5, "0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"],
+  [6, "0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c"],
 ]);
 
 const contracts = new Map<ChainId, string>([
   [2, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
   [4, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
-  [5, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
+  [6, "0x1ef9e15c3bbf0555860b5009B51722027134d53a"],
 ]);
 
 const tokens: CoingeckoTokenInfo[] = [
@@ -51,16 +51,17 @@ const tokens: CoingeckoTokenInfo[] = [
     coingeckoId: "binancecoin",
   },
   {
-    chainId: 5,
+    chainId: 6,
     symbol: "AVAX",
     address: "",
     coingeckoId: "avalanche-2",
   },
 ];
 
-const globalConfig: GlobalConfig = {
+const globalConfig = {
   rpcs,
   privateKeys,
+  tokens,
 };
 const logger = createLogger({
   level: "debug",
@@ -79,6 +80,7 @@ const providerConfig: CoingeckoProviderOptions = {
   tokens,
   rpcs,
 };
+
 const provider = new CoingeckoPriceFetcher(logger, providerConfig);
 executePriceFetching(provider, logger);
 
@@ -102,11 +104,11 @@ class DemoStrategy implements UpdateStrategy {
     this.logger.info("Price data: ", pricingData.isValid);
     for (const [chainId, price] of pricingData.nativeTokens.entries()) {
       this.logger.info(
-        "Native token price for chainId " + chainId + ": " + price
+        `Native token price for ${coalesceChainName(chainId)}: ${price}`
       );
     }
     for (const [chainId, price] of pricingData.gasPrices.entries()) {
-      this.logger.info("Gas price for chainId " + chainId + ": " + price);
+      this.logger.info(`Gas price for ${coalesceChainName(chainId)}: ${price}`);
     }
     return updates;
   }
@@ -117,6 +119,26 @@ class DemoStrategy implements UpdateStrategy {
   ): Promise<ethers.providers.TransactionResponse> {
     const tx = <ethers.providers.TransactionResponse>{};
     return tx;
+  }
+
+  reportPriceUpdate(chainName: string, params: { status: string }): void {
+    // do nothing,
+  }
+
+  async reportPriceUpdateGas(chainName: string, gas: number): Promise<void> {
+    // do nothing
+  }
+
+  reportContractPrice(
+    chainName: string,
+    price: number,
+    params: { isGasPrice: boolean }
+  ): void {
+    // do nothing
+  }
+
+  getMetrics(): Promise<string> {
+    return Promise.resolve("");
   }
 }
 

@@ -2,7 +2,7 @@ import axios from "axios";
 import { Logger } from "winston";
 import { TokenInfo } from "./";
 import { ethers } from "ethers";
-import { ChainId } from "@certusone/wormhole-sdk";
+import { ChainId, coalesceChainName } from "@certusone/wormhole-sdk";
 import { PriceFetcher, PricingData } from ".";
 import { PrometheusExporter } from "../prometheus";
 
@@ -86,16 +86,21 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       gasPrices: await this.fetchGasPrices(),
     };
 
-    this.logger.info("Pricing Data valid:", this.pricingData.isValid);
-    this.logger.info(
-      "Pricing Data nativeTokens:",
-      this.pricingData.nativeTokens
-    );
-    this.logger.info("Pricing Data gasPrice:", this.pricingData.gasPrices);
+    for (const token of this.tokenIds) {
+      this.reportProviderPrice(token, data[token].usd);
+    }
   }
 
-  public updateFailureCounter(): void {
-    this.exporter?.updatePriceProviderFailure("coingecko_provider");
+  public reportPricePollingSuccess(): void {
+    this.exporter?.reportPricePolling("success");
+  }
+
+  public reportPricePollingFailure(): void {
+    this.exporter?.reportPricePolling("failed");
+  }
+
+  public reportProviderPrice(token: string, price: number): void {
+    this.exporter?.reportProviderPrice(token, price);
   }
 
   public async getMetrics(): Promise<string> {
@@ -123,7 +128,9 @@ export class CoingeckoPriceFetcher implements PriceFetcher {
       const gasPrice = await this.fetchGasPriceForChain(token.chainId);
       gasPrices.set(token.chainId, gasPrice);
 
-      this.logger.debug(`Gas price for chain ${token.chainId}: ${gasPrice}`);
+      this.logger.debug(
+        `Gas price for ${coalesceChainName(token.chainId)}: ${gasPrice}`
+      );
     }
 
     return gasPrices;

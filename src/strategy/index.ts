@@ -16,7 +16,10 @@ export interface UpdateStrategy {
     signer: ethers.Signer,
     update: ContractUpdate
   ): Promise<ethers.providers.TransactionResponse>;
-  updatePriceUpdateAttempt(chainId: string): void;
-  updatePriceUpdateFailure(chainId: string): void;
+  reportPriceUpdateSuccess(chainName: string): void;
+  reportPriceUpdateFailure(chainName: string): void;
+  reportPriceUpdateGas(chainName: string, gas: number): Promise<void>;
+  reportContractNativePrice(chainName: string, price: number): void;
+  reportContractGasPrice(chainName: string, price: number): void;
   getMetrics(): Promise<string>;
 }
